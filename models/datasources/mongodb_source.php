@@ -76,11 +76,11 @@ class MongodbSource extends DataSource {
 /**
  * Default schema for the mongo models
  *
- * @var resource
+ * @var array
  * @access protected
  */
-    protected $_defaultSchema = array('_id' => array('type' => 'string', 'length' => 24),
-				      '_schemaless_data' => array('type' => 'schemaless'));
+	protected $_defaultSchema = array('_id' => array('type' => 'string', 'length' => 24),
+						'_schemaless_data' => array('type' => 'schemaless'));
 
 /**
  * Behavior automatically attached to the mongo models
@@ -88,7 +88,7 @@ class MongodbSource extends DataSource {
  * @var string
  * @access protected
  */
-    protected $_sourceBehavior = 'MongoDocument';
+	protected $_sourceBehavior = 'MongoDocument';
 
 /**
  * Constructor
