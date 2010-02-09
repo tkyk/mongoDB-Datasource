@@ -79,7 +79,16 @@ class MongodbSource extends DataSource {
  * @var resource
  * @access protected
  */
-    protected $_defaultSchema = array('_id' => array('type' => 'string', 'length' => 24));
+    protected $_defaultSchema = array('_id' => array('type' => 'string', 'length' => 24),
+				      '_schemaless_data' => array('type' => 'schemaless'));
+
+/**
+ * Behavior automatically attached to the mongo models
+ * 
+ * @var string
+ * @access protected
+ */
+    protected $_sourceBehavior = 'MongoDocument';
 
 /**
  * Constructor
@@ -88,6 +97,12 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function __construct($config = array()) {
+		// loaded as a plugin in CakePHP 1.3
+		if(strpos($config['datasource'], '.') !== false) {
+			list($plugin, $_source) = explode('.', $config['datasource'], 2);
+			$this->_sourceBehavior = "{$plugin}.{$this->_sourceBehavior}";
+		}
+
 		parent::__construct($config);
 		$this->connect();
 	}
@@ -190,10 +205,28 @@ class MongodbSource extends DataSource {
  */
 	public function describe(&$model) {
 		$model->primaryKey = '_id';
-		$schema = is_array($model->mongoSchema) ? $model->mongoSchema : array();
+		$this->_setSourceBehavior($model);
+		$schema = isset($model->mongoSchema) && is_array($model->mongoSchema)
+		  ? $model->mongoSchema : array();
 		return $schema + $this->_defaultSchema;
 	}
 
+/**
+ * Attaches $this->_sourceBehavior to the model
+ *
+ * @param Model $model 
+ * @access protected
+ */
+	function _setSourceBehavior(&$model)
+	{
+		if(empty($model->actsAs)) {
+			$model->actsAs = array();
+		}
+		if(!isset($model->actsAs[$this->_sourceBehavior]) &&
+			 !in_array($this->_sourceBehavior, $model->actsAs)) {
+			$model->actsAs[$this->_sourceBehavior] = array();
+		}
+	}
 
 /**
  * Calculate
@@ -218,6 +251,23 @@ class MongodbSource extends DataSource {
 		return $name;
 	}
 
+/**
+ * Retrieves data from $this->_sourceBehavior.
+ *
+ * @param Model $model
+ * @return array  data to save
+ */
+	function _dataToSave(&$model, $fields=null, $values=null)
+	{
+		if ($fields !== null && $values !== null) {
+			$data = array_combine($fields, $values);
+		} else {
+			$data = $model->data;
+		}
+		return $model->Behaviors->enabled($this->_sourceBehavior)
+			? $model->getSchemalessData($data) : $data;
+	}
+
 
 /**
  * Create Data
@@ -229,11 +279,7 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function create(&$model, $fields = null, $values = null) {
-		if ($fields !== null && $values !== null) {
-			$data = array_combine($fields, $values);
-		} else {
-			$data = $model->data;
-		}
+		$data = $this->_dataToSave($model, $fields, $values);
 
 		$result = $this->_db
 			->selectCollection($model->table)
@@ -259,15 +305,11 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function update(&$model, $fields = null, $values = null, $conditions = null) {
-		if ($fields !== null && $values !== null) {
-			$data = array_combine($fields, $values);
-		
-		} else if($fields !== null && $conditions !== null) {
+		if($fields !== null && $conditions !== null) {
 			return $this->updateAll($model, $fields, $conditions);
-
-		} else{
-			$data = $model->data;
 		}
+
+		$data = $this->_dataToSave($model, $fields, $values);
 		
 		if (!empty($data['_id']) && !is_object($data['_id'])) {
 			$data['_id'] = new MongoId($data['_id']);
