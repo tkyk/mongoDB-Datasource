@@ -1,5 +1,5 @@
 <div class="posts form">
-<?php echo $form->create('Post' , array( 'type' => 'post' ));?>
+<?php echo $form->create('MongoSamplePost' , array( 'type' => 'post' ));?>
 	<fieldset>
  		<legend><?php __('Edit Post');?></legend>
 	<?php

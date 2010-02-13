@@ -1,19 +1,13 @@
 <?php
-class PostsController extends AppController {
+class MongoSamplePostsController extends MongoSampleAppController {
 
-	/**
-	 *
-	 *
-	 * @var Post
-	 */
 	var $Post;
+	var $name = 'MongoSamplePosts';
 
-	var $name = 'Posts';
-
-
-
-
-	
+	function beforeFilter()
+	{
+	  $this->Post = $this->MongoSamplePost;
+	}
 
 	function index() {
 		$params = array(
