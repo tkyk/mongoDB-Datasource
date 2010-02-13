@@ -56,6 +56,40 @@ class MongodbSource extends DataSource {
 		'port'       => '27017'
 	);
 
+
+/**
+ * column definition
+ *
+ * @var array
+ */
+    var $columns = array(
+        'string' => array('name'  => 'varchar'),
+        'text' => array('name' => 'text'),
+        'integer' => array('name' => 'integer', 'formatter' => 'intval'),
+        'float' => array('name' => 'float', 'formatter' => 'floatval'),
+        'datetime' => array('name' => 'datetime', 'format' => 'Y-m-d H:i:s', 'formatter' => 'date'),
+        'timestamp' => array('name' => 'timestamp', 'format' => 'Y-m-d H:i:s', 'formatter' => 'date'),
+        'time' => array('name' => 'time', 'format' => 'H:i:s', 'formatter' => 'date'),
+        'date' => array('name' => 'date', 'format' => 'Y-m-d', 'formatter' => 'date'),
+    );
+
+/**
+ * Default schema for the mongo models
+ *
+ * @var array
+ * @access protected
+ */
+	protected $_defaultSchema = array('_id' => array('type' => 'string', 'length' => 24),
+						'_schemaless_data' => array('type' => 'schemaless'));
+
+/**
+ * Behavior automatically attached to the mongo models
+ * 
+ * @var string
+ * @access protected
+ */
+	protected $_sourceBehavior = 'MongoDocument';
+
 /**
  * Constructor
  *
@@ -63,9 +97,28 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function __construct($config = array()) {
+		// loaded as a plugin in CakePHP 1.3
+		if(strpos($config['datasource'], '.') !== false) {
+			list($plugin, $_source) = explode('.', $config['datasource'], 2);
+			$this->_sourceBehavior = "{$plugin}.{$this->_sourceBehavior}";
+		}
+
 		parent::__construct($config);
 		$this->connect();
 	}
+
+
+/**
+ * Destruct
+ *
+ * @access public
+ */
+    public function __destruct() {
+        if ($this->connected) {
+            $this->disconnect();
+        }
+    }
+
 
 /**
  * Connect to the database
@@ -128,6 +181,8 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function listSources($data = null) {
+		return true;
+		/*
 		$list = $this->_db->listCollections();
 		if (empty($list)) {
 			return array();
@@ -138,8 +193,40 @@ class MongodbSource extends DataSource {
 			}
 			return $collections;
 		}
+		*/
 	}
 
+/**
+ * Describe
+ *
+ * @param Model $model 
+ * @return array if model instance has mongoSchema, return it.
+ * @access public
+ */
+	public function describe(&$model) {
+		$model->primaryKey = '_id';
+		$this->_setSourceBehavior($model);
+		$schema = isset($model->mongoSchema) && is_array($model->mongoSchema)
+		  ? $model->mongoSchema : array();
+		return $schema + $this->_defaultSchema;
+	}
+
+/**
+ * Attaches $this->_sourceBehavior to the model
+ *
+ * @param Model $model 
+ * @access protected
+ */
+	function _setSourceBehavior(&$model)
+	{
+		if(empty($model->actsAs)) {
+			$model->actsAs = array();
+		}
+		if(!isset($model->actsAs[$this->_sourceBehavior]) &&
+			 !in_array($this->_sourceBehavior, $model->actsAs)) {
+			$model->actsAs[$this->_sourceBehavior] = array();
+		}
+	}
 
 /**
  * Calculate
@@ -150,6 +237,35 @@ class MongodbSource extends DataSource {
  */
 	public function calculate (&$model) {
 		return array('count' => true);
+	}
+
+/**
+ * Quotes identifiers.
+ *
+ * MongoDb does not need identifiers quoted, so this method simply returns the identifier.
+ *
+ * @param string $name The identifier to quote.
+ * @return string The quoted identifier.
+ */
+	public function name($name) {
+		return $name;
+	}
+
+/**
+ * Retrieves data from $this->_sourceBehavior.
+ *
+ * @param Model $model
+ * @return array  data to save
+ */
+	function _dataToSave(&$model, $fields=null, $values=null)
+	{
+		if ($fields !== null && $values !== null) {
+			$data = array_combine($fields, $values);
+		} else {
+			$data = $model->data;
+		}
+		return $model->Behaviors->enabled($this->_sourceBehavior)
+			? $model->getSchemalessData($data) : $data;
 	}
 
 
@@ -163,11 +279,7 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function create(&$model, $fields = null, $values = null) {
-		if ($fields !== null && $values !== null) {
-			$data = array_combine($fields, $values);
-		} else {
-			$data = $model->data;
-		}
+		$data = $this->_dataToSave($model, $fields, $values);
 
 		$result = $this->_db
 			->selectCollection($model->table)
@@ -193,15 +305,11 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function update(&$model, $fields = null, $values = null, $conditions = null) {
-		if ($fields !== null && $values !== null) {
-			$data = array_combine($fields, $values);
-		
-		} else if($fields !== null && $conditions !== null) {
+		if($fields !== null && $conditions !== null) {
 			return $this->updateAll($model, $fields, $conditions);
-
-		} else{
-			$data = $model->data;
 		}
+
+		$data = $this->_dataToSave($model, $fields, $values);
 		
 		if (!empty($data['_id']) && !is_object($data['_id'])) {
 			$data['_id'] = new MongoId($data['_id']);
@@ -272,12 +380,12 @@ class MongodbSource extends DataSource {
 		$mongoCollectionObj = $this->_db
 			->selectCollection($model->table);
 
-
 		$result = true;
-		if (is_array($conditions) && is_array($conditions[$model->alias . '._id'])) {
+		if (!empty($conditions[$model->alias . '._id']) && is_array($conditions[$model->alias . '._id'])) {
 			//for Model::deleteAll()
 			foreach ($conditions[$model->alias . '._id'] as $val) {
-				if (!$mongoCollectionObj->remove(array('_id' => $val))) {
+				$id = is_string($val) ? new MongoId($val) : $val;
+				if (!$mongoCollectionObj->remove(array('_id' => $id))) {
 					$result = false;
 				}
 			}
@@ -292,16 +400,6 @@ class MongodbSource extends DataSource {
 
 
 
-/**
- * Describe
- *
- * @param Model $model 
- * @return array
- * @access public
- */
-	public function describe(&$model) {
-		return array();
-	}
 
 
 
@@ -352,8 +450,8 @@ class MongodbSource extends DataSource {
 		$results = null;
 		while ($result->hasNext()) {
 			$mongodata = $result->getNext();
-			if ($this->config['set_string_id'] && empty($mongodata['id']) && is_object($mongodata['_id'])) {
-				$mongodata['id'] = $mongodata['_id']->__toString();
+			if ($this->config['set_string_id'] && !empty($mongodata['_id']) && is_object($mongodata['_id'])) {
+				$mongodata['_id'] = $mongodata['_id']->__toString();
 			}
 			$results[][$model->alias] = $mongodata;
 		}
