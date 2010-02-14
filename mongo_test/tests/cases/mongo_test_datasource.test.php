@@ -51,6 +51,10 @@ class MongoTestDatasource extends MongodbSource {
     return $model;
   }
 
+  function _id($id) {
+    return is_array($id) ? array_map(array($this, '_id'), $id) : new MongoId($id);
+  }
+
   function startTest() {
     $this->Person = ClassRegistry::init('MongoTestPerson');
     $this->realSource =& ConnectionManager::getDataSource($this->Person->useDbConfig);
@@ -158,5 +162,94 @@ class MongoTestDatasource extends MongodbSource {
     $this->assertTrue($ret);
   }
 
+  function testDeleteThroughRemove() {
+    $id = '123456789012345678901234';
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test', 'id' => $id));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('remove', true);
+
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('remove', array(array('_id' => new MongoId($id)),
+				     true));
+
+    // execute
+    $ret = $this->source->delete($model);
+    $this->assertTrue($ret);
+  }
+
+
+  function testDeleteThroughDeleteAllNoCascade() {
+    $conditions = array('active' => 0);
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('remove', true);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('remove', array($conditions, false));
+
+    // execute
+    $ret = $this->source->delete($model, $conditions);
+    $this->assertTrue($ret);
+  }
+
+  function testDeleteThroughDeleteAllWithCascade() {
+    $ids = $this->_id(array('123456789012345678901234',
+			    '123456789012345678901235',
+			    '123456789012345678901236'));
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test',
+				       'alias' => 'Test',
+				       'primaryKey' => '_id'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('remove', true);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('remove', array(array('_id' => array('$in' => $ids)),
+				     false));
+
+    // execute
+    $ret = $this->source->delete($model,
+				 array($model->alias . '.' . $model->primaryKey => $ids));
+    $this->assertTrue($ret);
+  }
+
+  /**
+   * Deletes all documents in the collection.
+   * This situation will not occur as long as you use Model::*,
+   * but is useful in unit tests.
+   */
+  function testDeleteThroughDeleteAllNoConditions() {
+    $conditions = null;
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('remove', true);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('remove', array(array(), false));
+
+    // execute
+    $ret = $this->source->delete($model, $conditions);
+    $this->assertTrue($ret);
+  }
 
 }

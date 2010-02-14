@@ -360,42 +360,35 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function delete(&$model, $conditions = null) {
-		
-		$id = null;
-		if (empty($conditions)) {
-			$id = $model->id;
+	  $mongoCollectionObj = $this->_db
+	    ->selectCollection($model->table);
 
-		} else if (is_array($conditions) && !empty($conditions['_id'])) {
-			$id = $conditions['_id'];
-	
-		} else if(!empty($conditions) && !is_array($conditions)) {
-			$id = $conditions;
-			$conditions = null;
-		}
-		
-		if (!empty($id) && is_string($id)) {
-			$conditions['_id'] = new MongoId($id);
-		}
+	  if(empty($conditions)) {
+	    if(!empty($model->id)) {
+	      return $mongoCollectionObj
+		->remove(array('_id' => new MongoId($model->id)),
+			 true);
+	    } else {
+	      $conditions = array();
+	    }
+	  }
 
-		$mongoCollectionObj = $this->_db
-			->selectCollection($model->table);
-
-		$result = true;
-		if (!empty($conditions[$model->alias . '._id']) && is_array($conditions[$model->alias . '._id'])) {
-			//for Model::deleteAll()
-			foreach ($conditions[$model->alias . '._id'] as $val) {
-				$id = is_string($val) ? new MongoId($val) : $val;
-				if (!$mongoCollectionObj->remove(array('_id' => $id))) {
-					$result = false;
-				}
-			}
-
-		} else {
-			$return = $mongoCollectionObj->remove($conditions);
-		}
-
-		return $result;			
-
+	  //for Model::deleteAll() no cascade and no callback
+	  if(!empty($conditions[$model->alias . '._id'])) {
+	    $id = $conditions[$model->alias . '._id'];
+	    $objIds = array();
+	    foreach((array)$id as $strId) {
+	      $objIds[] = new MongoId($strId);
+	    }
+	    return $mongoCollectionObj->remove(array('_id' => array('$in' => $objIds)),
+					       false);
+	  }
+	  
+	  //for Model::deleteAll()
+	  if(!empty($conditions['_id'])) {
+	    $conditions['_id'] = new MongoId($conditions['_id']);
+	  }
+	  return $mongoCollectionObj->remove($conditions, false);
 	}
 
 
