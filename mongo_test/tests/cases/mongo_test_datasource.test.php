@@ -106,4 +106,57 @@ class MongoTestDatasource extends MongodbSource {
     $this->assertEqual($model->id, $id);
   }
 
+  function testUpdateThroughSave() {
+    $id = '123456789012345678901234';
+    $fields = array('firstname', 'lastname');
+    $values = array('John', 'Smith');
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('update', true);
+
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('update', array(array('_id' => new MongoId($id)),
+				     array('$set' => array_combine($fields, $values)),
+				     array('multiple' => false)));
+
+    // execute
+    $ret = $this->source->update($model,
+				 am(array('_id'), $fields),
+				 am(array($id), $values));
+    $this->assertTrue($ret);
+  }
+
+  function testUpdateThroughUpdateAll() {
+    $fields = array('firstname' => 'John', 'lastname' => 'Smith');
+    $conditions = array('age' => 24);
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('update', true);
+
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('update', array($conditions,
+				     array('$set' => $fields),
+				     array('multiple' => true)));
+
+    // execute
+    $ret = $this->source->update($model,
+				 $fields,
+				 null,
+				 $conditions);
+    $this->assertTrue($ret);
+  }
+
+
 }
