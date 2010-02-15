@@ -102,4 +102,37 @@ class MongoTestPersonCase extends CakeTestCase
     $this->_testDeleteAll(false);
   }
 
+  function testUpdateBySaveWithParamId() {
+    $id1 = $this->_insert($p1 = array('name' => 'John Smith',
+				      'age' => 25));
+    $this->assertStringId($id1);
+
+    $newAge = 99;
+    $this->Person->create();
+    $this->assertTrue($this->Person->save(array('_id' => $id1,
+						'age' => $newAge)));
+    
+    $read = $this->Person->find('first', array('conditions' => array('_id' => $id1)));
+    $this->assertEqual($read[$this->Person->alias]['_id'],  $id1);
+    $this->assertEqual($read[$this->Person->alias]['name'], $p1['name']);
+    $this->assertEqual($read[$this->Person->alias]['age'],  $newAge);
+  }
+
+  function testUpdateBySaveWithModelId() {
+    $id1 = $this->_insert($p1 = array('name' => 'John Smith',
+				      'age' => 25));
+    $this->assertStringId($id1);
+
+    $newAge = 99;
+    $this->Person->create();
+    $this->Person->id = $id1;
+    $this->assertTrue($this->Person->save(array('age' => $newAge)));
+    
+    $read = $this->Person->find('first', array('conditions' => array('_id' => $id1)));
+    $this->assertEqual($read[$this->Person->alias]['_id'],  $id1);
+    $this->assertEqual($read[$this->Person->alias]['name'], $p1['name']);
+    $this->assertEqual($read[$this->Person->alias]['age'],  $newAge);
+  }
+
+
 }

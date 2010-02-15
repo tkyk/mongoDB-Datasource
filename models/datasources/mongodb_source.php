@@ -310,6 +310,10 @@ class MongodbSource extends DataSource {
 		}
 
 		$data = $this->_dataToSave($model, $fields, $values);
+
+		if(!empty($model->id)) {
+		  $data['_id'] = $model->id;
+		}
 		
 		if (!empty($data['_id']) && !is_object($data['_id'])) {
 			$data['_id'] = new MongoId($data['_id']);
