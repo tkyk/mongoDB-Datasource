@@ -186,6 +186,84 @@ class MongoTestDatasource extends MongodbSource {
     $this->assertTrue($ret);
   }
 
+  function testUpdateThroughUpdateAllPassingTrue() {
+    $fields = array('firstname' => 'John', 'lastname' => 'Smith');
+    $conditions = array();
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('update', true);
+
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('update', array($conditions,
+				     array('$set' => $fields),
+				     array('multiple' => true)));
+
+    // execute
+    $ret = $this->source->update($model,
+				 $fields,
+				 null,
+				 true);
+    $this->assertTrue($ret);
+  }
+
+  function testUpdateThroughUpdateAllPassingFalse() {
+    $fields = array('firstname' => 'John', 'lastname' => 'Smith');
+    $conditions = array('$where' => '0 == 1');
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('update', true);
+
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('update', array($conditions,
+				     array('$set' => $fields),
+				     array('multiple' => true)));
+
+    // execute
+    $ret = $this->source->update($model,
+				 $fields,
+				 null,
+				 false);
+    $this->assertTrue($ret);
+  }
+
+  function testUpdateThroughUpdateAllPassingEmpty() {
+    $fields = array('firstname' => 'John', 'lastname' => 'Smith');
+    $conditions = array();
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('update', true);
+
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('update', array($conditions,
+				     array('$set' => $fields),
+				     array('multiple' => true)));
+
+    // execute
+    $ret = $this->source->update($model,
+				 $fields,
+				 null,
+				 "");
+    $this->assertTrue($ret);
+  }
+
   function testDeleteThroughRemove() {
     $id = '123456789012345678901234';
 

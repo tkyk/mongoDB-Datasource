@@ -306,7 +306,7 @@ class MongodbSource extends DataSource {
  */
 	public function update(&$model, $fields = null, $values = null, $conditions = null) {
 		if($fields !== null && $conditions !== null) {
-			return $this->updateAll($model, $fields, $conditions);
+			return $this->_updateAll($model, $fields, $conditions);
 		}
 
 		$data = $this->_dataToSave($model, $fields, $values);
@@ -341,11 +341,17 @@ class MongodbSource extends DataSource {
  * @param array $fields Field data
  * @param array $conditions 
  * @return boolean Update result
- * @access public
+ * @access protected
  */
-	public function updateAll (&$model, $fields = null,  $conditions = null) {
+	protected function _updateAll (&$model, $fields = null,  $conditions = null) {
 		$fields = array('$set' => $fields);
-		
+
+		if($conditions === false) {
+		  $conditions = array('$where' => '0 == 1');
+		} elseif($conditions === true || empty($conditions)) {
+		  $conditions = array();
+		}
+
 		$result = $this->_db
 			->selectCollection($model->table)
 			->update($conditions, $fields, array("multiple" => true));
