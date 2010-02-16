@@ -214,7 +214,7 @@ class MongoTestDatasource extends MongodbSource {
 
   function testUpdateThroughUpdateAllPassingFalse() {
     $fields = array('firstname' => 'John', 'lastname' => 'Smith');
-    $conditions = array('$where' => '0 == 1');
+    $conditions = array('$where' => 'false');
 
     // setup actors
     $model = $this->_createModel(array('table' => 'test'));

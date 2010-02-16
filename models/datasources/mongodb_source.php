@@ -355,58 +355,34 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function update(&$model, $fields = null, $values = null, $conditions = null) {
-		if($fields !== null && $conditions !== null) {
-			return $this->_updateAll($model, $fields, $conditions);
+		$mongoCollectionObj = $this->_db
+			->selectCollection($model->table);
+
+		//updateAll
+		if($values === null) {
+		  return $mongoCollectionObj->update($this->conditions($conditions, $model),
+						     array('$set' => $fields),
+						     array("multiple" => true));
 		}
 
 		$data = $this->_dataToSave($model, $fields, $values);
 
+		$cond = null;
 		if(!empty($model->id)) {
-		  $data['_id'] = $model->id;
+		  $cond = $this->_idCondition($model->id);
 		}
-		
-		if (!empty($data['_id']) && !is_object($data['_id'])) {
-			$data['_id'] = new MongoId($data['_id']);
-		}
-
-		$mongoCollectionObj = $this->_db
-			->selectCollection($model->table);
-
 		if (!empty($data['_id'])) {
-			$cond = array('_id' => $data['_id']);
-			unset($data['_id']);
-			$data = array('$set' => $data);
-			return $mongoCollectionObj->update($cond, $data, array("multiple" => false));
+		  $cond = $this->_idCondition($data['_id']);
+		  unset($data['_id']);
+		}
+
+		if (!empty($cond)) {
+		  return $mongoCollectionObj->update($cond,
+						     array('$set' => $data),
+						     array("multiple" => false));
 		} else {
-			return $mongoCollectionObj->save($data);
+		  return false;
 		}
-	}
-
-
-
-/**
- * Update multiple Record
- *
- * @param Model $model Model Instance
- * @param array $fields Field data
- * @param array $conditions 
- * @return boolean Update result
- * @access protected
- */
-	protected function _updateAll (&$model, $fields = null,  $conditions = null) {
-		$fields = array('$set' => $fields);
-
-		if($conditions === false) {
-		  $conditions = array('$where' => '0 == 1');
-		} elseif($conditions === true || empty($conditions)) {
-		  $conditions = array();
-		}
-
-		$result = $this->_db
-			->selectCollection($model->table)
-			->update($conditions, $fields, array("multiple" => true));
-		
-		return $result;
 	}
 
 
