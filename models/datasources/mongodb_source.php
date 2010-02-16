@@ -314,6 +314,10 @@ class MongodbSource extends DataSource {
 	  return $ret;
 	}
 
+	protected function _idCondition($id) {
+	  return array('_id' => new MongoId($id));
+	}
+
 
 /**
  * Create Data
@@ -419,32 +423,10 @@ class MongodbSource extends DataSource {
 	  $mongoCollectionObj = $this->_db
 	    ->selectCollection($model->table);
 
-	  if(empty($conditions)) {
-	    if(!empty($model->id)) {
-	      return $mongoCollectionObj
-		->remove(array('_id' => new MongoId($model->id)),
-			 true);
-	    } else {
-	      $conditions = array();
-	    }
+	  if($conditions === null && !empty($model->id)) {
+	    return $mongoCollectionObj->remove($this->_idCondition($model->id), true);
 	  }
-
-	  //for Model::deleteAll() no cascade and no callback
-	  if(!empty($conditions[$model->alias . '._id'])) {
-	    $id = $conditions[$model->alias . '._id'];
-	    $objIds = array();
-	    foreach((array)$id as $strId) {
-	      $objIds[] = new MongoId($strId);
-	    }
-	    return $mongoCollectionObj->remove(array('_id' => array('$in' => $objIds)),
-					       false);
-	  }
-	  
-	  //for Model::deleteAll()
-	  if(!empty($conditions['_id'])) {
-	    $conditions['_id'] = new MongoId($conditions['_id']);
-	  }
-	  return $mongoCollectionObj->remove($conditions, false);
+	  return $mongoCollectionObj->remove($this->conditions($conditions, $model), false);
 	}
 
 
