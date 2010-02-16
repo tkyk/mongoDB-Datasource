@@ -354,4 +354,81 @@ class MongoTestDatasource extends MongodbSource {
     $this->assertTrue($ret);
   }
 
+
+  /**
+   * test that booleans and null make logical condition strings.
+   *
+   * @return void
+   */
+  function testBooleanNullConditionsParsing() {
+    $result = $this->source->conditions(true);
+    $this->assertEqual($result, array());
+
+    $result = $this->source->conditions(false);
+    $this->assertEqual($result, array('$where' => 'false'));
+
+    $result = $this->source->conditions(null);
+    $this->assertEqual($result, array());
+    
+    $result = $this->source->conditions(array());
+    $this->assertEqual($result, array());
+    
+    $result = $this->source->conditions('');
+    $this->assertEqual($result, array());
+    
+    $result = $this->source->conditions(' ');
+    $this->assertEqual($result, array());
+  }
+
+  function testAnyValues() {
+    $result = $this->source->conditions(100);
+    $this->assertEqual($result, 100);
+
+    $result = $this->source->conditions(array('a' => 1));
+    $this->assertEqual($result, array('a' => 1));
+
+    $result = $this->source->conditions("string value");
+    $this->assertEqual($result, "string value");
+  }
+
+  function testConditionsObjectizingId() {
+    $model = $this->_createModel(array('alias' => 'Test'));
+    $id = str_repeat('x', 24);
+    $id2 = str_repeat('y', 24);
+
+    $result = $this->source->conditions(array('a' => 100, '_id' => $id));
+    $this->assertEqual($result, array('a' => 100, '_id' => new MongoId($id)));
+
+    $result = $this->source->conditions(array('a' => 100, 'Test._id' => $id),
+					$model);
+    $this->assertEqual($result, array('a' => 100, '_id' => new MongoId($id)));
+
+    // Alias._id overrides _id
+    $result = $this->source->conditions(array('a' => 100, '_id' => $id, 'Test._id' => $id2),
+					$model);
+    $this->assertEqual($result, array('a' => 100, '_id' => new MongoId($id2)));
+  }
+
+  function testConditionsArrayId() {
+    $id = str_repeat('x', 24);
+    $id2 = str_repeat('y', 24);
+    $id3 = str_repeat('z', 24);
+
+    $model = $this->_createModel(array('alias' => 'Test'));
+
+    $result = $this->source->conditions(array('a' => 100, '_id' => array($id2, $id3)),
+					$model);
+    $this->assertEqual($result, array('a' => 100,
+				      '_id' => array('$in' => array(new MongoId($id2),
+								    new MongoId($id3)))));
+
+    $result = $this->source->conditions(array('a' => 100, 'Test._id' => array($id3, $id)),
+					$model);
+    $this->assertEqual($result, array('a' => 100,
+				      '_id' => array('$in' => array(new MongoId($id3),
+								    new MongoId($id)))));
+
+  }
+
+
 }

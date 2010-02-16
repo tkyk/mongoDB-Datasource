@@ -268,6 +268,52 @@ class MongodbSource extends DataSource {
 			? $model->getSchemalessData($data) : $data;
 	}
 
+/**
+ * Creates condition array. 
+ *
+ * @param mixed $conditions Array or string of conditions, or any value.
+ * @param Model $model A reference to the Model instance making the query
+ * @return array or any value
+ */
+	public function conditions($conditions, $model = null) {
+	  $ret = array();
+
+	  if($conditions === false) {
+	    $ret = array('$where' => 'false');
+	  } elseif($conditions === true || empty($conditions) ||
+		   (is_string($conditions) && trim($conditions) == '')) {
+	    $ret = array();
+	  } else {
+	    $ret = $conditions;
+	  }
+
+	  if(!is_array($ret)) {
+	    return $ret;
+	  }
+
+	  $id = null;
+	  if(!empty($ret['_id'])) {
+	    $id = $ret['_id'];
+	  }
+	  if(!empty($model) && !empty($ret[$model->alias.'._id'])) {
+	    $id = $ret[$model->alias.'._id'];
+	    unset($ret[$model->alias.'._id']);
+	  }
+
+	  if(!empty($id)) {
+	    if(is_array($id)) {
+	      $ids = array();
+	      foreach($id as $_id) {
+		$ids[] = new MongoId($_id);
+	      }
+	      $ret['_id'] = array('$in' => $ids);
+	    } else {
+	      $ret['_id'] = new MongoId($id);
+	    }
+	  }
+	  return $ret;
+	}
+
 
 /**
  * Create Data
