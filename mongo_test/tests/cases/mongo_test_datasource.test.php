@@ -393,8 +393,8 @@ class MongoTestDatasource extends MongodbSource {
 
   function testConditionsObjectizingId() {
     $model = $this->_createModel(array('alias' => 'Test'));
-    $id = str_repeat('x', 24);
-    $id2 = str_repeat('y', 24);
+    $id = str_repeat('a', 24);
+    $id2 = str_repeat('b', 24);
 
     $result = $this->source->conditions(array('a' => 100, '_id' => $id));
     $this->assertEqual($result, array('a' => 100, '_id' => new MongoId($id)));
@@ -410,9 +410,9 @@ class MongoTestDatasource extends MongodbSource {
   }
 
   function testConditionsArrayId() {
-    $id = str_repeat('x', 24);
-    $id2 = str_repeat('y', 24);
-    $id3 = str_repeat('z', 24);
+    $id = str_repeat('a', 24);
+    $id2 = str_repeat('b', 24);
+    $id3 = str_repeat('c', 24);
 
     $model = $this->_createModel(array('alias' => 'Test'));
 
