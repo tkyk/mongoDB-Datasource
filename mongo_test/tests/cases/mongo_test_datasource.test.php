@@ -443,5 +443,326 @@ class MongoTestDatasource extends MongodbSource {
 								    new MongoId($id)))));
   }
 
+  function _createCursor($rows=array()) {
+    $cur = new MockMongoCursor();
+
+    //setup as an actor
+    $cur->setReturnValue('hasNext', false);
+
+    foreach($rows as $i => $row) {
+      $cur->setReturnValueAt($i, 'hasNext', true);
+      $cur->setReturnValueAt($i, 'getNext', $row);
+    }
+
+    //setup as a ciritic
+    $cur->expectCallCount('hasNext', count($rows) + 1);
+    $cur->expectCallCount('getNext', count($rows));
+
+    return $cur;
+  }
+
+  /**
+   * This is from the Model::find()
+   */
+  function _makeQuery($query=array()) {
+    return array_merge(
+		       array(
+			     'conditions' => null, 'fields' => null, 'joins' => array(), 'limit' => null,
+			     'offset' => null, 'order' => null, 'page' => null, 'group' => null, 'callbacks' => true
+			     ),
+		       (array)$query
+		       );
+  }
+
+  function testReadNoParameters() {
+    $id = str_repeat('a', 24);
+
+    $singleRow = array('_id' => new MongoId($id),
+		       'age' => 20,
+		       'name' => 'John Smith');
+
+
+    $expectedRow = array('_id' => $id) + $singleRow;
+
+    //setup actors
+    $model = $this->_createModel(array('table' => 'tests', 'alias' => 'Test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $cur = $this->_createCursor(array($singleRow));
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('find', $cur, array(array(), array()));
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //setup critics
+    $col->expectOnce('find', array(array(), array()));
+
+    //execute tests
+    $ret = $this->source->read($model, $this->_makeQuery());
+
+    $this->assertEqual($ret, array(array($model->alias => $expectedRow)));
+  }
+
+  function testReadSimpleConditions() {
+    $id1 = str_repeat('a', 24);
+    $id2 = str_repeat('b', 24);
+
+    $conditions = array('age' => 20);
+
+    $row1 = array('_id' => new MongoId($id1),
+		  'age' => 20,
+		  'name' => 'John Smith');
+    $row2 = array('_id' => new MongoId($id2),
+		  'age' => 20,
+		  'name' => 'Paul Smith');
+
+    $expectedRow1 = array('_id' => $id1) + $row1;
+    $expectedRow2 = array('_id' => $id2) + $row2;
+
+    //setup actors
+    $model = $this->_createModel(array('table' => 'tests', 'alias' => 'Test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $cur = $this->_createCursor(array($row1, $row2));
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('find', $cur);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //setup critics
+    $col->expectOnce('find', array($this->source->conditions($conditions),
+				   array()));
+
+    //execute tests
+    $ret = $this->source->read($model, $this->_makeQuery(compact('conditions')));
+
+    $this->assertEqual($ret, array(array($model->alias => $expectedRow1),
+				   array($model->alias => $expectedRow2)));
+  }
+
+  function testReadWithArrayFields() {
+    $id = str_repeat('a', 24);
+    $conditions = array('_id' => $id,
+			'age' => 20);
+    $fields = array('age', 'name');
+
+    $singleRow = array('age' => 20,
+		       'name' => 'John Smith');
+
+    $expectedRow = $singleRow;
+
+    //setup actors
+    $model = $this->_createModel(array('table' => 'tests', 'alias' => 'Test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $cur = $this->_createCursor(array($singleRow));
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('find', $cur);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //setup critics
+    $col->expectOnce('find', array($this->source->conditions($conditions),
+				   $fields));
+
+    //execute tests
+    $ret = $this->source->read($model, $this->_makeQuery(compact('conditions', 'fields')));
+
+    $this->assertEqual($ret, array(array($model->alias => $expectedRow)));
+  }
+
+  function testReadWithStringFields() {
+    $id = str_repeat('a', 24);
+    $conditions = array('_id' => $id,
+			'age' => 20);
+    $fields = 'age';
+
+    $singleRow = array('age' => 20);
+    $expectedRow = $singleRow;
+
+    //setup actors
+    $model = $this->_createModel(array('table' => 'tests', 'alias' => 'Test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $cur = $this->_createCursor(array($singleRow));
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('find', $cur);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //setup critics
+    $col->expectOnce('find', array($this->source->conditions($conditions),
+				   array($fields)));
+
+    //execute tests
+    $ret = $this->source->read($model, $this->_makeQuery(compact('conditions', 'fields')));
+
+    $this->assertEqual($ret, array(array($model->alias => $expectedRow)));
+  }
+
+  function testReadInOrder() {
+    $id1 = str_repeat('a', 24);
+    $id2 = str_repeat('b', 24);
+
+    $conditions = array('age' => 20);
+    $order = array('age' => 1);
+
+    $row1 = array('_id' => new MongoId($id1),
+		  'age' => 20,
+		  'name' => 'John Smith');
+    $row2 = array('_id' => new MongoId($id2),
+		  'age' => 20,
+		  'name' => 'Paul Smith');
+
+    $expectedRow1 = array('_id' => $id1) + $row1;
+    $expectedRow2 = array('_id' => $id2) + $row2;
+
+    //setup actors
+    $model = $this->_createModel(array('table' => 'tests', 'alias' => 'Test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $cur = $this->_createCursor(array($row1, $row2));
+    $cur->setReturnValue('sort', $cur, array($order));
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('find', $cur);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //setup critics
+    $cur->expectOnce('sort', array($order));
+    $col->expectOnce('find', array($this->source->conditions($conditions),
+				   array()));
+
+    //execute tests
+    $ret = $this->source->read($model, $this->_makeQuery(compact('conditions', 'order')));
+
+    $this->assertEqual($ret, array(array($model->alias => $expectedRow1),
+				   array($model->alias => $expectedRow2)));
+  }
+
+  function testLimitAndOffset() {
+    $query = array('limit' => 10,
+		   'offset' => 100,
+		   'page' => 999);
+
+    $cur = new MockMongoCursor();
+    $cur->expectOnce('limit', array($query['limit']));
+    $cur->expectOnce('skip', array($query['offset']));
+    $this->source->limit($cur, $query);
+  }
+
+  function testLimitAndPage() {
+    $query = array('limit' => 10,
+		   'offset' => null,
+		   'page' => 5);
+
+    $cur = new MockMongoCursor();
+    $cur->expectOnce('limit', array($query['limit']));
+    $cur->expectOnce('skip',  array(40));
+    $this->source->limit($cur, $query);
+  }
+
+  function testOnlyLimit() {
+    $query = array('limit' => 100,
+		   'offset' => null,
+		   'page' => null);
+
+    $cur = new MockMongoCursor();
+    $cur->expectOnce('limit', array($query['limit']));
+    $cur->expectNever('skip');
+    $this->source->limit($cur, $query);
+  }
+
+  function testOnlyOffset() {
+    $query = array('limit' => null,
+		   'offset' => 5000,
+		   'page' => null);
+
+    $cur = new MockMongoCursor();
+    $cur->expectNever('limit');
+    $cur->expectOnce('skip',  array($query['offset']));
+    $this->source->limit($cur, $query);
+  }
+
+  function testOnlyPage() {
+    $query = array('limit' => null,
+		   'offset' => null,
+		   'page' => 10);
+
+    $cur = new MockMongoCursor();
+    $cur->expectNever('limit');
+    $cur->expectNever('skip');
+    $this->source->limit($cur, $query);
+  }
+
+  function testReadWithLimit() {
+    $id1 = str_repeat('a', 24);
+    $id2 = str_repeat('b', 24);
+
+    $conditions = array('age' => 20);
+    $limit = 50;
+    $offset = 100;
+
+    $row1 = array('_id' => new MongoId($id1),
+		  'age' => 20,
+		  'name' => 'John Smith');
+    $row2 = array('_id' => new MongoId($id2),
+		  'age' => 20,
+		  'name' => 'Paul Smith');
+
+    $expectedRow1 = array('_id' => $id1) + $row1;
+    $expectedRow2 = array('_id' => $id2) + $row2;
+
+    //setup actors
+    $model = $this->_createModel(array('table' => 'tests', 'alias' => 'Test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $cur = $this->_createCursor(array($row1, $row2));
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('find', $cur);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //setup critics
+    $col->expectOnce('find', array($this->source->conditions($conditions),
+				   array()));
+    $cur->expectOnce('limit', array($limit));
+    $cur->expectOnce('skip', array($offset));
+
+    //execute tests
+    $ret = $this->source->read($model, $this->_makeQuery(compact('conditions',
+								 'limit',
+								 'offset')));
+
+    $this->assertEqual($ret, array(array($model->alias => $expectedRow1),
+				   array($model->alias => $expectedRow2)));
+  }
+
+  function testReadCount() {
+    $count = 100;
+    $conditions = array('age' => 20);
+
+    //setup actors
+    $cur = new MockMongoCursor();
+    $cur->setReturnValue('count', $count, array(true));
+
+    $model = $this->_createModel(array('table' => 'tests',
+				       'alias' => 'Test',
+				       'findQueryType' => 'count'));
+    $model->Behaviors->setReturnValue('enabled', false);
+    $col = new MockMongoCollection();
+    $col->setReturnValue('find', $cur);
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //set critics
+    $cur->expectOnce('count', array(true));
+    $cur->expectNever('hasNext');
+    $cur->expectNever('getNext');
+
+    // execute
+    $ret = $this->source->read($model, $this->_makeQuery(compact('conditions')));
+    $expected = array(array($model->alias => array('count' => $count)));
+    $this->assertEqual($ret, $expected);
+  }
 
 }

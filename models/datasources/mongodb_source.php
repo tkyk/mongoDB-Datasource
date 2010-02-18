@@ -43,13 +43,8 @@ class MongodbSource extends DataSource {
  *
  * @var array
  * @access protected
- *
- * set_string_id: 
- *    true: In read() method, convert MongoId object to string and set it to array 'id'.
- *    false: not convert and set.
  */
 	var $_baseConfig = array(
-		'set_string_id' => true,
 		'persistent' => false,
 		'host'       => 'localhost',
 		'database'   => '',
@@ -407,7 +402,26 @@ class MongodbSource extends DataSource {
 
 
 
+	protected function _stringifyId($arr) {
+	  if(!empty($arr['_id']) && is_object($arr['_id'])) {
+	    $arr['_id'] = $arr['_id']->__toString();
+	  }
+	  return $arr;
+	}
 
+
+
+	public function limit($cur, $query=array()) {
+	  // ignoring 0
+	  if(!empty($query['limit'])) {
+	    $cur->limit($query['limit']);
+	  }
+	  if(!empty($query['offset'])) {
+	    $cur->skip($query['offset']);
+	  } elseif(!empty($query['page']) && !empty($query['limit'])) {
+	    $cur->skip(($query['page'] - 1) * $query['limit']);
+	  }
+	}
 
 
 /**
@@ -419,70 +433,29 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function read(&$model, $query = array()) {
-		$query = $this->_setEmptyArrayIfEmpty($query);
-		extract($query);
+	  foreach(array('fields', 'order') as $k) {
+	    $query[$k] = empty($query[$k]) ? array() : (array)$query[$k];
+	  }
+	  extract($query);
 
-		if (!empty($order[0])) {
-			$order = array_shift($order);
-		}
+	  $coll = $this->_db
+	    ->selectCollection($model->table);
 
-		if (!empty($conditions['_id']) && !is_object($conditions['_id'])) {
-			$conditions['_id'] = new MongoId($conditions['_id']);
-		}
+	  $cur = $coll->find($this->conditions($conditions, $model), $fields);
+	  if(!empty($order)) {
+	    $cur->sort($order);
+	  }
+	  $this->limit($cur, $query);
 
-		$fields = (is_array($fields)) ? $fields : array($fields);
-		$conditions = (is_array($conditions)) ? $conditions : array($conditions);
-		$order = (is_array($order)) ? $order : array($order);
+	  if ($model->findQueryType === 'count') {
+	    return array(array($model->alias => array('count' => $cur->count(true))));
+	  }
 
-		/*
-		 * before update, model::save() check exist record with conditions key (ex: Post._id).
-		 * Convert Post._id to _id and make a MongoId object
-		 */
-		if (!empty($conditions[$model->alias . '._id'])) {
-			$conditions['_id'] = new MongoId($conditions[$model->alias . '._id']);
-			unset($conditions[$model->alias . '._id']);
-		}
-
-		$result = $this->_db
-			->selectCollection($model->table)
-			->find($conditions, $fields)
-			->sort($order)
-			->limit($limit)
-			->skip(($page - 1) * $limit);
-
-		if ($model->findQueryType === 'count') {
-			return array(array($model->alias => array('count' => $result->count())));
-		}
-
-		$results = null;
-		while ($result->hasNext()) {
-			$mongodata = $result->getNext();
-			if ($this->config['set_string_id'] && !empty($mongodata['_id']) && is_object($mongodata['_id'])) {
-				$mongodata['_id'] = $mongodata['_id']->__toString();
-			}
-			$results[][$model->alias] = $mongodata;
-		}
-		return $results;
-	}
-
-/**
- * Recursively Setup Empty arrays for data
- *
- * @param mixed $data Input Data
- * @return array
- * @access protected
- */
-	protected function _setEmptyArrayIfEmpty($data) {
-		if (is_array($data)) {
-			foreach($data as $key => $value) {
-				if (empty($value)) {
-					$data[$key] = array();
-				}
-			}
-			return $data;
-		} else {
-			return empty($data) ? array() : $data;
-		}
+	  $ret = array();
+	  while($cur->hasNext()) {
+	    $ret[][$model->alias] = $this->_stringifyId($cur->getNext());
+	  }
+	  return $ret;
 	}
 
 }
