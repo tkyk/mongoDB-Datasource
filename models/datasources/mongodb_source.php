@@ -304,11 +304,11 @@ class MongodbSource extends DataSource {
 	    if(is_array($id)) {
 	      $ids = array();
 	      foreach($id as $_id) {
-		$ids[] = new MongoId($_id);
+		$ids[] = is_string($_id) ? new MongoId($_id) : $_id;
 	      }
 	      $ret['_id'] = array('$in' => $ids);
 	    } else {
-	      $ret['_id'] = new MongoId($id);
+	      $ret['_id'] = is_string($id) ? new MongoId($id) : $id;
 	    }
 	  }
 	  return $ret;

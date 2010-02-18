@@ -407,6 +407,12 @@ class MongoTestDatasource extends MongodbSource {
     $result = $this->source->conditions(array('a' => 100, '_id' => $id, 'Test._id' => $id2),
 					$model);
     $this->assertEqual($result, array('a' => 100, '_id' => new MongoId($id2)));
+
+    // already object
+    $objId = new MongoId($id);
+    $result = $this->source->conditions(array('a' => 100, '_id' => $id),
+					$model);
+    $this->assertEqual($result, array('a' => 100, '_id' => $objId));
   }
 
   function testConditionsArrayId() {
@@ -428,6 +434,13 @@ class MongoTestDatasource extends MongodbSource {
 				      '_id' => array('$in' => array(new MongoId($id3),
 								    new MongoId($id)))));
 
+    // already objects
+    $objId3 = new MongoId($id3);
+    $result = $this->source->conditions(array('a' => 100, 'Test._id' => array($objId3, $id)),
+					$model);
+    $this->assertEqual($result, array('a' => 100,
+				      '_id' => array('$in' => array($objId3,
+								    new MongoId($id)))));
   }
 
 
