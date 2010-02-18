@@ -453,7 +453,8 @@ class MongodbSource extends DataSource {
 
 	  $ret = array();
 	  while($cur->hasNext()) {
-	    $ret[][$model->alias] = $this->_stringifyId($cur->getNext());
+	    $ret[][$model->alias] = empty($object_id) ?
+	      $this->_stringifyId($cur->getNext()) : $cur->getNext();
 	  }
 	  return $ret;
 	}

@@ -765,4 +765,35 @@ class MongoTestDatasource extends MongodbSource {
     $this->assertEqual($ret, $expected);
   }
 
+  function testReadObjectId() {
+    $id = str_repeat('a', 24);
+    $object_id = true;
+
+    $singleRow = array('_id' => new MongoId($id),
+		       'age' => 20,
+		       'name' => 'John Smith');
+
+    $expectedRow = $singleRow;
+
+    //setup actors
+    $model = $this->_createModel(array('table' => 'tests', 'alias' => 'Test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $cur = $this->_createCursor(array($singleRow));
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('find', $cur, array(array(), array()));
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //setup critics
+    $col->expectOnce('find', array(array(), array()));
+
+    //execute tests
+    $ret = $this->source->read($model, $this->_makeQuery(compact('object_id')));
+
+    $this->assertEqual($ret, array(array($model->alias => $expectedRow)));
+    $this->assertIsA($ret[0][$model->alias]['_id'], 'MongoId');
+  }
+
+
 }
