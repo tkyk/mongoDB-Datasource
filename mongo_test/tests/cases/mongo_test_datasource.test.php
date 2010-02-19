@@ -605,7 +605,9 @@ class MongoTestDatasource extends MongodbSource {
     $id2 = str_repeat('b', 24);
 
     $conditions = array('age' => 20);
-    $order = array('age' => 1);
+    $actualOrder = array('age' => 1);
+    // Cake's Model::find will wrap $order with an array
+    $order = array($actualOrder);
 
     $row1 = array('_id' => new MongoId($id1),
 		  'age' => 20,
@@ -622,14 +624,14 @@ class MongoTestDatasource extends MongodbSource {
     $model->Behaviors->setReturnValue('enabled', false);
 
     $cur = $this->_createCursor(array($row1, $row2));
-    $cur->setReturnValue('sort', $cur, array($order));
+    $cur->setReturnValue('sort', $cur, array($actualOrder));
 
     $col = new MockMongoCollection();
     $col->setReturnValue('find', $cur);
     $this->db->setReturnValue('selectCollection', $col, array($model->table));
 
     //setup critics
-    $cur->expectOnce('sort', array($order));
+    $cur->expectOnce('sort', array($actualOrder));
     $col->expectOnce('find', array($this->source->conditions($conditions),
 				   array()));
 

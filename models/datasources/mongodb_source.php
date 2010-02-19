@@ -442,8 +442,8 @@ class MongodbSource extends DataSource {
 	    ->selectCollection($model->table);
 
 	  $cur = $coll->find($this->conditions($conditions, $model), $fields);
-	  if(!empty($order)) {
-	    $cur->sort($order);
+	  if(!empty($order[0])) {
+	    $cur->sort($order[0]);
 	  }
 	  $this->limit($cur, $query);
 
