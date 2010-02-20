@@ -746,7 +746,7 @@ class MongoTestDatasource extends MongodbSource {
 
     //setup actors
     $cur = new MockMongoCursor();
-    $cur->setReturnValue('count', $count, array(true));
+    $cur->setReturnValue('count', $count, array());
 
     $model = $this->_createModel(array('table' => 'tests',
 				       'alias' => 'Test',
@@ -757,7 +757,7 @@ class MongoTestDatasource extends MongodbSource {
     $this->db->setReturnValue('selectCollection', $col, array($model->table));
 
     //set critics
-    $cur->expectOnce('count', array(true));
+    $cur->expectOnce('count', array());
     $cur->expectNever('hasNext');
     $cur->expectNever('getNext');
 

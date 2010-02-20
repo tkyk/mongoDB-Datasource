@@ -448,7 +448,7 @@ class MongodbSource extends DataSource {
 	  $this->limit($cur, $query);
 
 	  if ($model->findQueryType === 'count') {
-	    return array(array($model->alias => array('count' => $cur->count(true))));
+	    return array(array($model->alias => array('count' => $cur->count())));
 	  }
 
 	  $ret = array();
