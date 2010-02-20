@@ -257,5 +257,146 @@ class MongoTestPersonCase extends CakeTestCase
     $this->assertTrue(!array_key_exists('address', $read3[$this->Person->alias]));
   }
 
+  function testFindAll() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('name' => "name-{$num}",
+			   'num' => $num));
+    }
+
+    // all
+    $ret = $this->Person->find('all');
+    $this->assertEqual(count($ret), 20);
+    foreach($ret as $_r) {
+      $r = $_r[$this->Person->alias];
+      $this->assertTrue(isset($r['_id']) && isset($r['name']) && isset($r['num']));
+      $num = $r['num'];
+      $this->assertEqual($r['name'], "name-{$num}");
+    }
+
+    // greater than 10
+    $ret = $this->Person->find('all', array('conditions' => array('num' => array('$gt' => 10))));
+    $this->assertEqual(count($ret), 10);
+    foreach($ret as $_r) {
+      $r = $_r[$this->Person->alias];
+      $this->assertTrue(isset($r['_id']) && isset($r['name']) && isset($r['num']));
+      $num = $r['num'];
+      $this->assertTrue($num > 10);
+      $this->assertEqual($r['name'], "name-{$num}");
+    }
+
+    // no match
+    $ret = $this->Person->find('all', array('conditions' => false));
+    $this->assertTrue(is_array($ret));
+    $this->assertEqual(count($ret), 0);
+  }
+
+  function testFindAllFields() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('name' => "name-{$num}",
+			   'num' => $num));
+    }
+
+    // name and num; _id is always returned
+    $ret = $this->Person->find('all', array('fields' => array('name', 'num')));
+    $this->assertEqual(count($ret), 20);
+    foreach($ret as $_r) {
+      $r = $_r[$this->Person->alias];
+      $this->assertTrue(isset($r['_id']) && isset($r['name']) && isset($r['num']));
+      $num = $r['num'];
+      $this->assertEqual($r['name'], "name-{$num}");
+    }
+
+    // num only; _id is always returned
+    $ret = $this->Person->find('all', array('fields' => 'num',
+					    'conditions' => array('num' => array('$gt' => 10))));
+    $this->assertEqual(count($ret), 10);
+    foreach($ret as $_r) {
+      $r = $_r[$this->Person->alias];
+      $this->assertTrue(isset($r['_id']) && !isset($r['name']) && isset($r['num']));
+      $this->assertTrue($r['num'] > 10);
+    }
+  }
+
+  function testFindAllOrderAndLimit() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('name' => "name-{$num}",
+			   'num' => $num));
+    }
+
+    $ret = $this->Person->find('all', array('order' => array('num' => -1),
+					    'limit' => 2));
+
+    $this->assertEqual(count($ret), 2);
+    $this->assertEqual($ret[0][$this->Person->alias]['num'], 20);
+    $this->assertEqual($ret[1][$this->Person->alias]['num'], 19);
+  }
+
+  function testFindAllLimitAndOffset() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('name' => "name-{$num}",
+			   'num' => $num));
+    }
+
+    $ret = $this->Person->find('all', array('order' => array('num' => 1),
+					    'limit' => 3,
+					    'offset' => 10));
+
+    $this->assertEqual(count($ret), 3);
+    $this->assertEqual($ret[0][$this->Person->alias]['num'], 11);
+    $this->assertEqual($ret[1][$this->Person->alias]['num'], 12);
+    $this->assertEqual($ret[2][$this->Person->alias]['num'], 13);
+  }
+
+  function testFindAllLimitAndPage() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('name' => "name-{$num}",
+			   'num' => $num));
+    }
+
+    $ret = $this->Person->find('all', array('order' => array('num' => 1),
+					    'limit' => 3,
+					    'page' => 4));
+
+    $this->assertEqual(count($ret), 3);
+    $this->assertEqual($ret[0][$this->Person->alias]['num'], 10);
+    $this->assertEqual($ret[1][$this->Person->alias]['num'], 11);
+    $this->assertEqual($ret[2][$this->Person->alias]['num'], 12);
+  }
+
+  function testFindAllManyParameters() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('name' => "name-{$num}",
+			   'num' => $num));
+    }
+
+    $ret = $this->Person->find('all', array('conditions' => array('num' => array('$lt' => 15,
+										 '$gt' => 5)),
+					    'order' => array('num' => 1),
+					    'limit' => 100,
+					    'offset' => 5));
+
+    $this->assertEqual(count($ret), 4);
+    $this->assertEqual($ret[0][$this->Person->alias]['num'], 11);
+    $this->assertEqual($ret[1][$this->Person->alias]['num'], 12);
+    $this->assertEqual($ret[2][$this->Person->alias]['num'], 13);
+    $this->assertEqual($ret[3][$this->Person->alias]['num'], 14);
+  }
+
+  function testFindCount() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('name' => "name-{$num}",
+			   'num' => $num));
+    }
+
+    $this->assertEqual($this->Person->find('count'), 20);
+    $this->assertEqual($this->Person->find('count', array('conditions' => array('num' => array('$gt' => 5)))), 15);
+    $this->assertEqual($this->Person->find('count', array('conditions' => array('num' => array('$gt' => 20)))), 0);
+
+
+    // limit and offset/page will be ignored because of pecl mongo's limitation.
+    $this->assertEqual($this->Person->find('count', array('limit' => 100)), 20);
+    $this->assertEqual($this->Person->find('count', array('limit' => 10)), 20);
+    $this->assertEqual($this->Person->find('count', array('offset' => 15, 'limit' => 100)), 20);
+  }
 
 }
