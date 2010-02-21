@@ -39,6 +39,13 @@ class MongodbSource extends DataSource {
 	protected $_db = null;
 
 /**
+ * MongoCollection cache
+ * 
+ * @var array
+ */
+	protected $_collections = array();
+
+/**
  * Base Config
  *
  * @var array
@@ -313,6 +320,13 @@ class MongodbSource extends DataSource {
 	  return array('_id' => new MongoId($id));
 	}
 
+	protected function _getCollection($model) {
+	  if(isset($this->_collections[$model->table])) {
+	    return $this->_collections[$model->table];
+	  }
+	  return $this->_collections[$model->table]
+	    = $this->_db->selectCollection($model->table);
+	}
 
 /**
  * Create Data
@@ -325,10 +339,7 @@ class MongodbSource extends DataSource {
  */
 	public function create(&$model, $fields = null, $values = null) {
 		$data = $this->_dataToSave($model, $fields, $values);
-
-		$result = $this->_db
-			->selectCollection($model->table)
-			->insert($data, true);
+		$result = $this->_getCollection($model)->insert($data, true);
 
 		if ($result['ok'] === 1.0) {
 			$id = is_object($data['_id']) ? $data['_id']->__toString() : null;
@@ -350,8 +361,7 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function update(&$model, $fields = null, $values = null, $conditions = null) {
-		$mongoCollectionObj = $this->_db
-			->selectCollection($model->table);
+		$mongoCollectionObj = $this->_getCollection($model);
 
 		//updateAll
 		if($values === null) {
@@ -391,8 +401,7 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function delete(&$model, $conditions = null) {
-	  $mongoCollectionObj = $this->_db
-	    ->selectCollection($model->table);
+	  $mongoCollectionObj = $this->_getCollection($model);
 
 	  if($conditions === null && !empty($model->id)) {
 	    return $mongoCollectionObj->remove($this->_idCondition($model->id), true);
@@ -438,10 +447,8 @@ class MongodbSource extends DataSource {
 	  }
 	  extract($query);
 
-	  $coll = $this->_db
-	    ->selectCollection($model->table);
-
-	  $cur = $coll->find($this->conditions($conditions, $model), $fields);
+	  $cur = $this->_getCollection($model)
+	    ->find($this->conditions($conditions, $model), $fields);
 	  if(!empty($order[0])) {
 	    $cur->sort($order[0]);
 	  }
@@ -469,8 +476,7 @@ class MongodbSource extends DataSource {
  * @return mixed
  */
 	public function query($method, $params, $model = null) {
-	  $coll = $this->_db
-	    ->selectCollection($model->table);
+	  $coll = $this->_getCollection($model);
 
 	  if(method_exists($coll, $method)) {
 	    return call_user_func_array(array($coll, $method), $params);
