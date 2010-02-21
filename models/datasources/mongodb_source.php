@@ -57,7 +57,8 @@ class MongodbSource extends DataSource {
 		'persistent' => false,
 		'host'       => 'localhost',
 		'database'   => '',
-		'port'       => '27017'
+		'port'       => '27017',
+		'debug'      => true
 	);
 
 
@@ -107,12 +108,13 @@ class MongodbSource extends DataSource {
 			$this->_sourceBehavior = "{$plugin}.{$this->_sourceBehavior}";
 		}
 
-		$this->fullDebug = Configure::read('debug') > 1;
+		parent::__construct($config);
+
+		$this->fullDebug = $this->config['debug'] && Configure::read('debug') > 1;
 		if($this->fullDebug) {
 		  $this->_logger = new MongodbSource_Logger($this);
 		}
 
-		parent::__construct($config);
 		$this->connect();
 	}
 
