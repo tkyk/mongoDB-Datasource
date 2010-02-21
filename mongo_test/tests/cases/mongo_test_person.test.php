@@ -399,4 +399,26 @@ class MongoTestPersonCase extends CakeTestCase
     $this->assertEqual($this->Person->find('count', array('offset' => 15, 'limit' => 100)), 20);
   }
 
+  function testQuery() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('name' => "name-{$num}",
+			   'num' => $num));
+    }
+
+    $deleted = $this->Person->deleteIndexes();
+    $this->assertTrue(is_array($deleted) && $deleted['ok'] == 1.0);
+
+    $prevIndex = $this->Person->getIndexInfo();
+    $prev = count($prevIndex);
+    $this->assertTrue(is_array($prevIndex));
+
+    $this->assertTrue($this->Person->ensureIndex(array('num' => -1)));
+
+    $afterIndex = $this->Person->getIndexInfo();
+    $after = count($afterIndex);
+    $this->assertTrue(is_array($afterIndex));
+    $this->assertEqual($after, $prev + 1);
+  }
+
+
 }

@@ -459,5 +459,24 @@ class MongodbSource extends DataSource {
 	  return $ret;
 	}
 
+
+/**
+ * Executes MongoCollection methods.
+ *
+ * @param string $method
+ * @param array  $params
+ * @param Model  $model
+ * @return mixed
+ */
+	public function query($method, $params, $model = null) {
+	  $coll = $this->_db
+	    ->selectCollection($model->table);
+
+	  if(method_exists($coll, $method)) {
+	    return call_user_func_array(array($coll, $method), $params);
+	  }
+	  return null;
+	}
+
 }
 ?>

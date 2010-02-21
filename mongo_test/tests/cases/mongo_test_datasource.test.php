@@ -797,5 +797,30 @@ class MongoTestDatasource extends MongodbSource {
     $this->assertIsA($ret[0][$model->alias]['_id'], 'MongoId');
   }
 
+  function testQuery()
+  {
+    $indexParams = array(array('x' => 1), array('unique' => true));
+    $countParams = array(array('x' => array('$gt' => 3)));
+
+    //setup actors
+    $model = $this->_createModel(array('table' => 'tests', 'alias' => 'Test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('ensureIndex', true, $indexParams);
+    $col->setReturnValue('count', 5, $countParams);
+
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    //setup critics
+    $col->expectOnce('ensureIndex', $indexParams);
+    $col->expectOnce('count', $countParams);
+
+    // execute tests
+    $this->assertTrue($this->source->query('ensureIndex', $indexParams, $model));
+    $this->assertEqual($this->source->query('count', $countParams, $model), 5);
+
+    $this->assertNull($this->source->query('NoSuchMethod', array(), $model));
+  }
 
 }
