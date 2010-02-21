@@ -5,6 +5,16 @@ App::import('Model', 'MongoTest.MongoTestPerson');
 class MongoTestPersonCase extends CakeTestCase
 {
   var $Person;
+  var $prevDebug;
+
+  function startCase() {
+    $this->prevDebug = Configure::read('debug');
+    Configure::write('debug', 1);
+  }
+
+  function endCase() {
+    Configure::write('debug', $this->prevDebug);
+  }
 
   function startTest() {
     $this->Person = ClassRegistry::init('MongoTestPerson');

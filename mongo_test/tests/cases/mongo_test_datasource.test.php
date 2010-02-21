@@ -28,8 +28,12 @@ class MongoTestDatasourceCase extends CakeTestCase
   var $db;
   var $source;
   var $realSource;
+  var $prevDebug;
 
   function startCase() {
+    $this->prevDebug = Configure::read('debug');
+    Configure::write('debug', 1);
+
     // loads MongodbSource through loading Model.
     ClassRegistry::init('MongoTestPerson');
 
@@ -40,6 +44,10 @@ class MongoTestDatasource extends MongodbSource {
   }
 }
 ');
+  }
+
+  function endCase() {
+    Configure::write('debug', $this->prevDebug);
   }
 
   function _createModel($props=array()) {

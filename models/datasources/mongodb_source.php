@@ -38,6 +38,8 @@ class MongodbSource extends DataSource {
  */
 	protected $_db = null;
 
+	protected $_logger;
+
 /**
  * MongoCollection cache
  * 
@@ -105,21 +107,14 @@ class MongodbSource extends DataSource {
 			$this->_sourceBehavior = "{$plugin}.{$this->_sourceBehavior}";
 		}
 
+		$this->fullDebug = Configure::read('debug') > 1;
+		if($this->fullDebug) {
+		  $this->_logger = new MongodbSource_Logger($this);
+		}
+
 		parent::__construct($config);
 		$this->connect();
 	}
-
-
-/**
- * Destruct
- *
- * @access public
- */
-    public function __destruct() {
-        if ($this->connected) {
-            $this->disconnect();
-        }
-    }
 
 
 /**
@@ -157,6 +152,9 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function close() {
+		if($this->fullDebug) {
+		  $this->_logger->showLog();
+		}
 		return $this->disconnect();
 	}	
 
@@ -324,8 +322,9 @@ class MongodbSource extends DataSource {
 	  if(isset($this->_collections[$model->table])) {
 	    return $this->_collections[$model->table];
 	  }
-	  return $this->_collections[$model->table]
-	    = $this->_db->selectCollection($model->table);
+	  $coll = $this->_db->selectCollection($model->table);
+	  return $this->_collections[$model->table] =
+	    $this->fullDebug ? $this->_logger->createProxy($coll) : $coll;
 	}
 
 /**
@@ -478,11 +477,126 @@ class MongodbSource extends DataSource {
 	public function query($method, $params, $model = null) {
 	  $coll = $this->_getCollection($model);
 
-	  if(method_exists($coll, $method)) {
+	  if(is_callable(array($coll, $method))) {
 	    return call_user_func_array(array($coll, $method), $params);
 	  }
 	  return null;
 	}
 
 }
+
+
+/**
+ * MongoDB Source Logger
+ *
+ * @package mongodb
+ * @subpackage mongodb.models.datasources.mongodb_source
+ */
+class MongodbSource_Logger
+{
+  protected $_source;
+  protected $_log = array();
+  protected $_proxyClass = array('MongoCollection' => 'MongodbSource_Tracer',
+				 'MongoCursor' => 'MongodbSource_Tracer_MongoCursor');
+
+  public function __construct($source) {
+    $this->_source = $source;
+  }
+
+  public function trace() {
+    $this->_log[] = func_get_args();
+  }
+
+  public function createProxy($target) {
+    if(is_object($target)) {
+      $class = get_class($target);
+      if(isset($this->_proxyClass[$class])) {
+	return new $this->_proxyClass[$class]($this, $target);
+      }
+    }
+    return $target;
+  }
+
+  public function stringifyArg($arg, $pl="[", $pr="]") {
+    switch(true) {
+    case is_scalar($arg):
+      return var_export($arg, true);
+    case $arg === array():
+      return $pl . $pr;
+    case is_array($arg) && array_keys($arg) === range(0, count($arg)-1):
+      return $pl. join(",", array_map(array($this, __FUNCTION__), $arg)) . $pr;
+    case is_a($arg, 'MongoId'):
+      return "MongoId(". $arg->__toString() .")";
+    default:
+      $pairs = array();
+      foreach((array)$arg as $k => $v) {
+	$pairs[] = $k .":". $this->stringifyArg($v);
+      }
+      return "{". join(",", $pairs) ."}";
+    }
+  }
+
+  public function showLog() {
+    if (PHP_SAPI != 'cli') {
+      $tableId = "cakeRequestLog_" . preg_replace('/[^A-Za-z0-9_]/', '_', uniqid(time(), true));
+      printf('<table class="cake-sql-log" id="%s" cellspacing="0" border= "0">', h($tableId));
+      printf('<caption>(%s) %s method call(s)</caption>', h($this->_source->configKeyName), h(count($this->_log)));
+      print ("<thead>\n<tr><th>Nr</th><th>Method</th><th>Took (ms)</th></tr>\n</thead>\n<tbody>\n");
+      foreach($this->_log as $i => $r) {
+	$class = str_replace('Mongo', '', get_class($r[0]));
+	printf('<tr><td>%d</td><td>%s</td><td>%s</td></tr>',
+	       $i+1, h($class ."->". $r[1] . $this->stringifyArg($r[2], "(", ")")), h($r[3]));
+      }
+      print ("</tbody></table>\n");
+    } else {
+      foreach($this->_log as $i => $r) {
+	$class = str_replace('Mongo', '', get_class($r[0]));
+	printf("%d %s\n", $i+1, $class ."->". $r[1] . $this->stringifyArg($r[2], "(", ")"));
+      }
+    }
+  }
+}
+
+/**
+ * MongoDB Source Method Tracer
+ *
+ * @package mongodb
+ * @subpackage mongodb.models.datasources.mongodb_source
+ */
+class MongodbSource_Tracer
+{
+  protected $_logger, $_target, $_dontLog = array();
+
+  public function __construct($logger, $target) {
+    $this->_logger = $logger;
+    $this->_target = $target;
+  }
+
+  public function __call($method, $args) {
+    if(!method_exists($this->_target, $method)) {
+      throw new Exception('undefined method ' . $method);
+    }
+    $t = getMicrotime();
+    $ret = $this->_logger->
+      createProxy(call_user_func_array(array($this->_target, $method), $args));
+    $took = round((getMicrotime() - $t) * 1000, 0);
+
+    if(!isset($this->_dontLog[$method])) {
+      $this->_logger->trace($this->_target, $method, $args, $took);
+    }
+    return $ret;
+  }
+}
+
+/**
+ * MongoDB Source Method Tracer for MongoCursor
+ *
+ * @package mongodb
+ * @subpackage mongodb.models.datasources.mongodb_source
+ */
+class MongodbSource_Tracer_MongoCursor extends MongodbSource_Tracer
+{
+  protected $_dontLog = array('hasNext' => true, 'getNext' => true);
+}
+
 ?>
