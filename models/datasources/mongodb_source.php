@@ -38,6 +38,11 @@ class MongodbSource extends DataSource {
  */
 	protected $_db = null;
 
+/**
+ * MongodbSource_Logger
+ *
+ * @var MongodbSource_Logger
+ */
 	protected $_logger;
 
 /**
@@ -109,13 +114,22 @@ class MongodbSource extends DataSource {
 		}
 
 		parent::__construct($config);
+		$this->setDebugMode(Configure::read('debug'));
+		$this->connect();
+	}
 
-		$this->fullDebug = $this->config['debug'] && Configure::read('debug') > 1;
-		if($this->fullDebug) {
+/**
+ * Set debug mode.
+ * 
+ * If $debug > 1, all queries (methods) will be logged and displayed.
+ * 
+ * @param integer $debug
+ */
+	public function setDebugMode($debug) {
+		$this->fullDebug = $this->config['debug'] && $debug > 1;
+		if($this->fullDebug && empty($this->_logger)) {
 		  $this->_logger = new MongodbSource_Logger($this);
 		}
-
-		$this->connect();
 	}
 
 
@@ -321,12 +335,16 @@ class MongodbSource extends DataSource {
 	}
 
 	protected function _getCollection($model) {
+	  if($this->fullDebug) {
+	    return $this->_logger
+	      ->createProxy($this->_db->selectCollection($model->table));
+	  }
+
 	  if(isset($this->_collections[$model->table])) {
 	    return $this->_collections[$model->table];
 	  }
 	  $coll = $this->_db->selectCollection($model->table);
-	  return $this->_collections[$model->table] =
-	    $this->fullDebug ? $this->_logger->createProxy($coll) : $coll;
+	  return $this->_collections[$model->table] = $coll;
 	}
 
 /**

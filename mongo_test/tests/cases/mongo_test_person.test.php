@@ -6,10 +6,11 @@ class MongoTestPersonCase extends CakeTestCase
 {
   var $Person;
   var $prevDebug;
+  var $debugParam = 1;
 
   function startCase() {
     $this->prevDebug = Configure::read('debug');
-    Configure::write('debug', 1);
+    Configure::write('debug', $this->debugParam);
   }
 
   function endCase() {
@@ -22,6 +23,7 @@ class MongoTestPersonCase extends CakeTestCase
     $this->Person->id = null;
     $db =& ConnectionManager::getDataSource($this->Person->useDbConfig);
     $db->delete($this->Person, array());
+    $db->setDebugMode(Configure::read('debug'));
   }
 
   function testInit() {
@@ -432,3 +434,10 @@ class MongoTestPersonCase extends CakeTestCase
 
 
 }
+
+
+class MongoTestPersonWithDebugCase extends MongoTestPersonCase
+{
+  var $debugParam = 2;
+}
+
