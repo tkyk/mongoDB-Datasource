@@ -537,20 +537,20 @@ class MongodbSource_Logger
     return $target;
   }
 
-  public function stringifyArg($arg, $pl="[", $pr="]") {
+  public static function encodeArg($arg, $pl="[", $pr="]") {
     switch(true) {
-    case is_scalar($arg):
+    case is_null($arg) or is_scalar($arg):
       return var_export($arg, true);
     case $arg === array():
       return $pl . $pr;
     case is_array($arg) && array_keys($arg) === range(0, count($arg)-1):
-      return $pl. join(",", array_map(array($this, __FUNCTION__), $arg)) . $pr;
+      return $pl. join(",", array_map(array(__CLASS__, __FUNCTION__), $arg)) . $pr;
     case is_a($arg, 'MongoId'):
       return "MongoId(". $arg->__toString() .")";
     default:
       $pairs = array();
       foreach((array)$arg as $k => $v) {
-	$pairs[] = $k .":". $this->stringifyArg($v);
+	$pairs[] = $k .":". self::encodeArg($v);
       }
       return "{". join(",", $pairs) ."}";
     }
@@ -565,13 +565,13 @@ class MongodbSource_Logger
       foreach($this->_log as $i => $r) {
 	$class = str_replace('Mongo', '', get_class($r[0]));
 	printf('<tr><td>%d</td><td>%s</td><td>%s</td></tr>',
-	       $i+1, h($class ."->". $r[1] . $this->stringifyArg($r[2], "(", ")")), h($r[3]));
+	       $i+1, h($class ."->". $r[1] . self::encodeArg($r[2], "(", ")")), h($r[3]));
       }
       print ("</tbody></table>\n");
     } else {
       foreach($this->_log as $i => $r) {
 	$class = str_replace('Mongo', '', get_class($r[0]));
-	printf("%d %s\n", $i+1, $class ."->". $r[1] . $this->stringifyArg($r[2], "(", ")"));
+	printf("%d %s\n", $i+1, $class ."->". $r[1] . self::encodeArg($r[2], "(", ")"));
       }
     }
   }
