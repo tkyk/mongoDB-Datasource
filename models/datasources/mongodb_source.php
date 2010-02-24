@@ -594,7 +594,8 @@ class MongodbSource_Tracer
 
   public function __call($method, $args) {
     if(!method_exists($this->_target, $method)) {
-      throw new Exception('undefined method ' . $method);
+      $targetClass = get_class($this->_target);
+      throw new Exception("Call to undefined method {$targetClass}::{$method}()");
     }
     $t = getMicrotime();
     $ret = $this->_logger->

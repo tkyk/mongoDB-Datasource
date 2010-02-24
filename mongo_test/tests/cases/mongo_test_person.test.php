@@ -432,6 +432,9 @@ class MongoTestPersonCase extends CakeTestCase
     $this->assertEqual($after, $prev + 1);
   }
 
+  function testQueryUndefinedMethod() {
+    $this->assertNull($this->Person->{'  @@undefinedMethod@@  '}());
+  }
 
 }
 
@@ -439,5 +442,20 @@ class MongoTestPersonCase extends CakeTestCase
 class MongoTestPersonWithDebugCase extends MongoTestPersonCase
 {
   var $debugParam = 2;
+
+  function testQueryUndefinedMethod() {
+    $method = '  @@undefinedMethod@@  ';
+    try {
+      $this->Person->{$method}();
+    }
+    catch(Exception $e) {
+      $err = $e->getMessage();
+      $this->assertPattern('/undefined method/', $err);
+      $this->assertPattern("/{$method}/", $err);
+      return;
+    }
+    $this->fail("No exception was thrown.");
+  }
+
 }
 
