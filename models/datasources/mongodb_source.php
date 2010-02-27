@@ -91,6 +91,14 @@ class MongodbSource extends DataSource {
 	protected $_sourceBehavior = 'MongoDocument';
 
 /**
+ * Plugin prefix
+ *
+ * @var string
+ * @access protected
+ */
+	protected $_pluginPrefix = "";
+
+/**
  * Constructor
  *
  * @param array $config Configuration array
@@ -100,7 +108,7 @@ class MongodbSource extends DataSource {
 		// loaded as a plugin in CakePHP 1.3
 		if(strpos($config['datasource'], '.') !== false) {
 			list($plugin, $_source) = explode('.', $config['datasource'], 2);
-			$this->_sourceBehavior = "{$plugin}.{$this->_sourceBehavior}";
+			$this->_pluginPrefix = "{$plugin}.";
 		}
 
 		parent::__construct($config);
@@ -219,12 +227,13 @@ class MongodbSource extends DataSource {
  */
 	function _setSourceBehavior(&$model)
 	{
+		$behavior = $this->_pluginPrefix . $this->_sourceBehavior;
 		if(empty($model->actsAs)) {
 			$model->actsAs = array();
 		}
-		if(!isset($model->actsAs[$this->_sourceBehavior]) &&
-			 !in_array($this->_sourceBehavior, $model->actsAs)) {
-			$model->actsAs[$this->_sourceBehavior] = array();
+		if(!isset($model->actsAs[$behavior]) &&
+			 !in_array($behavior, $model->actsAs)) {
+			$model->actsAs[$behavior] = array();
 		}
 	}
 
