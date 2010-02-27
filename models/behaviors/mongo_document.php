@@ -95,6 +95,7 @@ class MongoDocumentBehavior extends ModelBehavior
 			unset($model->data[$model->alias][$key]);
 		}
 		$model->data[$model->alias][$schemalessField] = $schemaless;
+
 		return true;
 	}
 
