@@ -28,8 +28,12 @@ class MongoTestDatasourceCase extends CakeTestCase
   var $db;
   var $source;
   var $realSource;
+  var $prevDebug;
 
   function startCase() {
+    $this->prevDebug = Configure::read('debug');
+    Configure::write('debug', 1);
+
     // loads MongodbSource through loading Model.
     ClassRegistry::init('MongoTestPerson');
 
@@ -40,6 +44,10 @@ class MongoTestDatasource extends MongodbSource {
   }
 }
 ');
+  }
+
+  function endCase() {
+    Configure::write('debug', $this->prevDebug);
   }
 
   function _createModel($props=array()) {
@@ -821,6 +829,47 @@ class MongoTestDatasource extends MongodbSource {
     $this->assertEqual($this->source->query('count', $countParams, $model), 5);
 
     $this->assertNull($this->source->query('NoSuchMethod', array(), $model));
+  }
+}
+
+
+class MongoTestMongodbSource_LoggerCase extends CakeTestCase
+{
+  function _enc()
+  {
+    $args = func_get_args();
+    return call_user_func_array(array('MongodbSource_Logger', 'encodeArg'), $args);
+  }
+
+  function testEncodeArg()
+  {
+    $this->assertIdentical("1", $this->_enc(1));
+    $this->assertIdentical("0", $this->_enc(0));
+    $this->assertIdentical("-1", $this->_enc(-1));
+    $this->assertIdentical("1.234", $this->_enc(1.234));
+    $this->assertIdentical("true", $this->_enc(true));
+    $this->assertIdentical("false", $this->_enc(false));
+    $this->assertIdentical("NULL", $this->_enc(null));
+    $this->assertIdentical("'abcdef'", $this->_enc("abcdef"));
+
+    $this->assertIdentical("[]", $this->_enc(array()));
+    $this->assertIdentical("&%", $this->_enc(array(), '&', '%'));
+    $this->assertIdentical("[1,2,3]", $this->_enc(array(1, 2, 3)));
+    $this->assertIdentical("{1:1,2:2,3:3}", $this->_enc(array(1 => 1, 2, 3)));
+    $this->assertIdentical("[[]]", $this->_enc(array(array())));
+    $this->assertIdentical("&[]%", $this->_enc(array(array()), '&', '%'));
+    $this->assertIdentical("{foo:'bar'}", $this->_enc(array('foo' => 'bar'), '&', '%'));
+
+    $strId = str_repeat('a', 24);
+    $this->assertIdentical("MongoId({$strId})",
+			   $this->_enc(new MongoId($strId)));
+
+    $this->assertIdentical("{foo:'bar',baz:[1,2,NULL],bar:{opt1:true,opt2:false,opt3:MongoId({$strId})}}",
+			   $this->_enc(array('foo' => 'bar',
+					     'baz' => array(1,2,null),
+					     'bar' => array('opt1' => true,
+							    'opt2' => false,
+							    'opt3' => new MongoId($strId)))));
   }
 
 }

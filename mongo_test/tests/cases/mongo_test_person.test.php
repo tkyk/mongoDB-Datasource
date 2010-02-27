@@ -5,6 +5,17 @@ App::import('Model', 'MongoTest.MongoTestPerson');
 class MongoTestPersonCase extends CakeTestCase
 {
   var $Person;
+  var $prevDebug;
+  var $debugParam = 1;
+
+  function startCase() {
+    $this->prevDebug = Configure::read('debug');
+    Configure::write('debug', $this->debugParam);
+  }
+
+  function endCase() {
+    Configure::write('debug', $this->prevDebug);
+  }
 
   function startTest() {
     $this->Person = ClassRegistry::init('MongoTestPerson');
@@ -12,6 +23,7 @@ class MongoTestPersonCase extends CakeTestCase
     $this->Person->id = null;
     $db =& ConnectionManager::getDataSource($this->Person->useDbConfig);
     $db->delete($this->Person, array());
+    $db->setDebugMode(Configure::read('debug'));
   }
 
   function testInit() {
@@ -420,5 +432,30 @@ class MongoTestPersonCase extends CakeTestCase
     $this->assertEqual($after, $prev + 1);
   }
 
+  function testQueryUndefinedMethod() {
+    $this->assertNull($this->Person->{'  @@undefinedMethod@@  '}());
+  }
 
 }
+
+
+class MongoTestPersonWithDebugCase extends MongoTestPersonCase
+{
+  var $debugParam = 2;
+
+  function testQueryUndefinedMethod() {
+    $method = '  @@undefinedMethod@@  ';
+    try {
+      $this->Person->{$method}();
+    }
+    catch(Exception $e) {
+      $err = $e->getMessage();
+      $this->assertPattern('/undefined method/', $err);
+      $this->assertPattern("/{$method}/", $err);
+      return;
+    }
+    $this->fail("No exception was thrown.");
+  }
+
+}
+
