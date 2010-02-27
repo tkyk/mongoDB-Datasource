@@ -830,6 +830,39 @@ class MongoTestDatasource extends MongodbSource {
 
     $this->assertNull($this->source->query('NoSuchMethod', array(), $model));
   }
+
+  function testRawUpdate()
+  {
+    $strId = str_repeat('b', 24);
+    $objId = new MongoId($strId);
+
+    $fields = array('$inc' => array('age' => 1));
+    $conditions = array('_id' => $strId, 'age' => 24);
+    $objConditions = am($conditions, array('_id' => $objId));
+    $options = array('multiple' => false,
+		     'upsert' => false);
+
+    // setup actors
+    $model = $this->_createModel(array('table' => 'test'));
+    $model->Behaviors->setReturnValue('enabled', false);
+
+    $col = new MockMongoCollection();
+    $col->setReturnValue('update', true);
+
+    $this->db->setReturnValue('selectCollection', $col, array($model->table));
+
+    // setup critics
+    $col->expectOnce('update', array($objConditions,
+				     $fields,
+				     $options));
+
+    // execute
+    $ret = $this->source->rawUpdate($model,
+				    $fields,
+				    $conditions,
+				    $options);
+    $this->assertTrue($ret);
+  }
 }
 
 

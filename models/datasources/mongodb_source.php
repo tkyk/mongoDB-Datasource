@@ -418,6 +418,22 @@ class MongodbSource extends DataSource {
 		}
 	}
 
+/**
+ * Low level API for MongoCollection::update
+ * 
+ * @param Model $model
+ * @param array $fields
+ * @param array $conditions
+ * @param array $options
+ * @return boolean
+ */
+	public function rawUpdate(&$model, $fields, $conditions, $options = null) {
+	  return $this->_getCollection($model)
+	    ->update($this->conditions($conditions, $model),
+		     $fields,
+		     $options);
+	}
+
 
 
 /**
