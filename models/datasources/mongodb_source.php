@@ -184,7 +184,10 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function getLog() {
-	  return $this->_logger->getLog();
+	  if(!empty($this->_logger)) {
+	    return $this->_logger->getLog();
+	  }
+	  return array('count' => 0, 'time' => 0, 'log' => array());
 	}
 
 /**
