@@ -505,6 +505,68 @@ class MongoTestPersonCase extends CakeTestCase
 
   }
 
+  function testUpdateByModifier() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('num1' => $num,
+			   'num2' => $num,
+			   'arr' => array()));
+    }
+
+    $cond = array('num1' => array('$gt' => 10));
+    $inc = 5;
+    $pushed = array(1,2,3);
+
+    $this->Person->updateByModifier('$inc',     array('num2' => $inc), $cond);
+    $this->Person->updateByModifier('$pushAll', array('arr' => $pushed), $cond);
+
+    $updated = $this->Person->find('all',
+				   array('conditions' => $cond));
+    $notUpdated = $this->Person->find('all',
+				      array('conditions' => array('$not' => $cond)));
+    foreach($updated as $r) {
+      $d = $r[$this->Person->alias];
+      $this->assertEqual($d['num1'] + $inc, $d['num2']);
+      $this->assertEqual($pushed, $d['arr']);
+    }
+
+    foreach($notUpdated as $r) {
+      $d = $r[$this->Person->alias];
+      $this->assertEqual($d['num1'], $d['num2']);
+      $this->assertEqual(array(), $d['arr']);
+    }
+  }
+
+  function testUpdateByModifierShorthand() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('num1' => $num,
+			   'num2' => $num,
+			   'arr' => array()));
+    }
+
+    $cond = array('num1' => array('$gt' => 10));
+    $inc = 5;
+    $pushed = array(1,2,3);
+
+    $this->Person->{'$inc'}(array('num2' => $inc), $cond);
+    $this->Person->{'$pushAll'}(array('arr' => $pushed), $cond);
+
+    $updated = $this->Person->find('all',
+				   array('conditions' => $cond));
+    $notUpdated = $this->Person->find('all',
+				      array('conditions' => array('$not' => $cond)));
+    foreach($updated as $r) {
+      $d = $r[$this->Person->alias];
+      $this->assertEqual($d['num1'] + $inc, $d['num2']);
+      $this->assertEqual($pushed, $d['arr']);
+    }
+
+    foreach($notUpdated as $r) {
+      $d = $r[$this->Person->alias];
+      $this->assertEqual($d['num1'], $d['num2']);
+      $this->assertEqual(array(), $d['arr']);
+    }
+  }
+
 
 }
 

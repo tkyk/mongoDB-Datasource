@@ -38,6 +38,12 @@ class MongoDocumentBehavior extends ModelBehavior
 	var $_defaultSettings = array();
 
 /**
+ * @var array
+ */
+	var $mapMethods = array('/^\$(?:inc|set|unset|push|pushAll|pop|pull|pullAll)$/'
+				=> 'updateByModifier');
+
+/**
  * setup callback
  */
 	function setup(&$model, $settings=array())
@@ -134,6 +140,33 @@ class MongoDocumentBehavior extends ModelBehavior
 			      'upsert' => false), $options);
 	  $db = ConnectionManager::getDataSource($model->useDbConfig);
 	  return $db->rawUpdate($model, $fields, $conditions, $options);
+	}
+
+/**
+ * Updates with $modifier.
+ * 
+ * Model->{$modifier}(...) calls this method.
+ *
+ * @param Model $model
+ * @param string $modifier
+ * @param array $fields
+ * @param array $conditions
+ * @param array $options
+ * @return boolean
+ */
+	function updateByModifier(&$model,
+				  $modifier,
+				  $fields,
+				  $conditions=array(),
+				  $options=array())
+	{
+	  if($modifier == '$pushall' || $modifier == '$pullall') {
+	    $modifier = substr_replace($modifier, 'All', -3);
+	  }
+	  return $this->update($model,
+			       array($modifier => $fields),
+			       $conditions,
+			       $options);
 	}
 
 }
