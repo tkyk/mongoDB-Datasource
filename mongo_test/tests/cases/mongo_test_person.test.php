@@ -436,6 +436,76 @@ class MongoTestPersonCase extends CakeTestCase
     $this->assertNull($this->Person->{'  @@undefinedMethod@@  '}());
   }
 
+  function testUpdate() {
+    foreach(range(1,20) as $num) {
+      $this->_insert(array('num1' => $num,
+			   'num2' => $num,
+			   'arr' => array()));
+    }
+
+    $this->Person->update(array('$inc' => array('num2' => 5),
+				'$push' => array('arr' => 'new')),
+			  array('num1' => array('$gt' => 10)));
+
+    $updated = $this->Person->find('all',
+				   array('conditions' => 
+					 array('num1' => array('$gt' => 10))));
+    $notUpdated = $this->Person->find('all',
+				      array('conditions' => 
+					    array('num1' => array('$lte' => 10))));
+    foreach($updated as $r) {
+      $d = $r[$this->Person->alias];
+      $this->assertEqual(array('new'), $d['arr']);
+      $this->assertEqual($d['num1'] + 5, $d['num2']);
+    }
+
+    foreach($notUpdated as $r) {
+      $d = $r[$this->Person->alias];
+      $this->assertEqual(array(), $d['arr']);
+      $this->assertEqual($d['num1'], $d['num2']);
+    }
+  }
+
+  function testUpdateSingle() {
+    foreach(range(1,5) as $num) {
+      $this->_insert(array('num1' => $num,
+			   'num2' => $num,
+			   'arr' => array()));
+    }
+
+    $this->Person->update(array('$push' => array('arr' => 'new')),
+			  array(),
+			  array('multiple' => false));
+
+    $this->assertEqual(1, $this->Person->find('count', array('conditions' =>
+							     array('arr' => 'new'))));
+  }
+
+  function testUpdateUpsert() {
+    foreach(range(1,5) as $num) {
+      $this->_insert(array('num1' => $num,
+			   'num2' => $num,
+			   'arr' => array()));
+    }
+
+    //default is false
+    $this->assertEqual(5, $this->Person->find('count'));
+    $this->Person->update(array('$push' => array('arr' => 'new')),
+			  array('num1' => array('$gt' => 100)));
+    $this->assertEqual(5, $this->Person->find('count'));
+
+    //upsert => true
+    $this->Person->update(array('$push' => array('arr' => 'new')),
+			  array('num1' => array('$gt' => 100)),
+			  array('upsert' => true,
+				'multiple' => true));
+    $this->assertEqual(6, $this->Person->find('count'));
+    $this->assertEqual(1, $this->Person->find('count', array('conditions' =>
+							     array('arr' => 'new'))));
+
+  }
+
+
 }
 
 

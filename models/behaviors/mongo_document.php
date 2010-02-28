@@ -117,4 +117,23 @@ class MongoDocumentBehavior extends ModelBehavior
 		}
 		return $data;
 	}
+
+
+/**
+ * Low level API for update
+ *
+ * @param Model $model
+ * @param array $fields
+ * @param array $conditions
+ * @param array $options
+ * @return boolean
+ */
+	function update(&$model, $fields, $conditions=array(), $options=array())
+	{
+	  $options = am(array('multiple' => true,
+			      'upsert' => false), $options);
+	  $db = ConnectionManager::getDataSource($model->useDbConfig);
+	  return $db->rawUpdate($model, $fields, $conditions, $options);
+	}
+
 }
