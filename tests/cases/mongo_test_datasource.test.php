@@ -1,5 +1,7 @@
 <?php
 
+require_once dirname(__FILE__) . DS . 'mongo_test_case.php';
+
 App::import('Model', 'Mongo.MongoTestPerson');
 Mock::generate('MongoDB');
 Mock::generate('MongoCollection');
@@ -21,38 +23,17 @@ class MyMockMongoCollection extends MockMongoCollection
   }
 }
 
-class MongoTestDatasourceCase extends CakeTestCase
+class MongoTestDatasourceCase extends MongoTestCase
 {
   var $Person;
 
   var $db;
   var $source;
   var $realSource;
-  var $prevDebug;
-
-  function _buildModelPath() {
-    $testApp = realpath(dirname(__FILE__) . DS . ".." . DS . "test_app");
-    $modelPaths = array($testApp . DS . 'models' . DS);
-
-    if(version_compare(Configure::version(), '1.3.0-beta', '<')) {
-      Configure::write('modelPaths', $modelPaths);
-    } else {
-      App::build(array('models' => $modelPaths));
-    }
-  }
-
-  function _restoreModelPath() {
-    if(version_compare(Configure::version(), '1.3.0-beta', '<')) {
-      Configure::write('modelPaths', array());
-    } else {
-      App::build();
-    }
-  }
 
   function startCase() {
     $this->_buildModelPath();
-    $this->prevDebug = Configure::read('debug');
-    Configure::write('debug', 1);
+    $this->_setDebug(1);
 
     // loads MongodbSource through loading Model.
     ClassRegistry::init('MongoTestPerson');
@@ -67,7 +48,7 @@ class MongoTestDatasource extends MongodbSource {
   }
 
   function endCase() {
-    Configure::write('debug', $this->prevDebug);
+    $this->_restoreDebug();
     $this->_restoreModelPath();
   }
 
@@ -887,7 +868,7 @@ class MongoTestDatasource extends MongodbSource {
 }
 
 
-class MongoTestMongodbSource_LoggerCase extends CakeTestCase
+class MongoTestMongodbSource_LoggerCase extends MongoTestCase
 {
   function _enc()
   {

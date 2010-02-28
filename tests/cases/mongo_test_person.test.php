@@ -1,40 +1,21 @@
 <?php
 
+require_once dirname(__FILE__) . DS . 'mongo_test_case.php';
+
 App::import('Model', 'Mongo.MongoTestPerson');
 
-class MongoTestPersonCase extends CakeTestCase
+class MongoTestPersonCase extends MongoTestCase
 {
   var $Person;
-  var $prevDebug;
   var $debugParam = 1;
-
-  function _buildModelPath() {
-    $testApp = realpath(dirname(__FILE__) . DS . ".." . DS . "test_app");
-    $modelPaths = array($testApp . DS . 'models' . DS);
-
-    if(version_compare(Configure::version(), '1.3.0-beta', '<')) {
-      Configure::write('modelPaths', $modelPaths);
-    } else {
-      App::build(array('models' => $modelPaths));
-    }
-  }
-
-  function _restoreModelPath() {
-    if(version_compare(Configure::version(), '1.3.0-beta', '<')) {
-      Configure::write('modelPaths', array());
-    } else {
-      App::build();
-    }
-  }
 
   function startCase() {
     $this->_buildModelPath();
-    $this->prevDebug = Configure::read('debug');
-    Configure::write('debug', $this->debugParam);
+    $this->_setDebug($this->debugParam);
   }
 
   function endCase() {
-    Configure::write('debug', $this->prevDebug);
+    $this->_restoreDebug();
     $this->_restoreModelPath();
   }
 
