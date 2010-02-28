@@ -170,11 +170,22 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function close() {
-		if($this->fullDebug) {
+		if($this->fullDebug &&
+		   version_compare(Configure::version(), '1.3.0-beta', '<')) {
 		  $this->_logger->showLog();
 		}
 		return $this->disconnect();
-	}	
+	}
+
+/**
+ * Get the query log as an array.
+ *
+ * @return array Array of queries run as an array
+ * @access public
+ */
+	public function getLog() {
+	  return $this->_logger->getLog();
+	}
 
 /**
  * Disconnect from the database
@@ -573,6 +584,24 @@ class MongodbSource_Logger
       }
       return "{". join(",", $pairs) ."}";
     }
+  }
+
+  public function getLog() {
+    $log = array();
+    $count = 0;
+    $time = 0;
+
+    foreach($this->_log as $i => $r) {
+      $count++;
+      $time+= $r[3];
+      $class = str_replace('Mongo', '', get_class($r[0]));
+      $log[] = array('query' => $class ."->". $r[1] . self::encodeArg($r[2], "(", ")"),
+		     'error' => "",
+		     'affected' => "",
+		     'numRows' => "",
+		     'took' => $r[3]);
+    }
+    return compact('log', 'count', 'time');
   }
 
   public function showLog() {
