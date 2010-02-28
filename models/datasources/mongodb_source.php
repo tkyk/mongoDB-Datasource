@@ -17,16 +17,16 @@
 * Redistributions of files must retain the above copyright notice.
 *
 * @copyright Copyright 2010, Yasushi Ichikawa http://github.com/ichikaway/
-* @package mongodb
-* @subpackage mongodb.models.datasources
+* @package mongo
+* @subpackage mongo.models.datasources
 * @license http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 
 /**
  * MongoDB Source
  *
- * @package mongodb
- * @subpackage mongodb.models.datasources
+ * @package mongo
+ * @subpackage mongo.models.datasources
  */
 class MongodbSource extends DataSource {
 
@@ -528,8 +528,8 @@ class MongodbSource extends DataSource {
 /**
  * MongoDB Source Logger
  *
- * @package mongodb
- * @subpackage mongodb.models.datasources.mongodb_source
+ * @package mongo
+ * @subpackage mongo.models.datasources.mongodb_source
  */
 class MongodbSource_Logger
 {
@@ -599,8 +599,8 @@ class MongodbSource_Logger
 /**
  * MongoDB Source Method Tracer
  *
- * @package mongodb
- * @subpackage mongodb.models.datasources.mongodb_source
+ * @package mongo
+ * @subpackage mongo.models.datasources.mongodb_source
  */
 class MongodbSource_Tracer
 {
@@ -631,8 +631,8 @@ class MongodbSource_Tracer
 /**
  * MongoDB Source Method Tracer for MongoCursor
  *
- * @package mongodb
- * @subpackage mongodb.models.datasources.mongodb_source
+ * @package mongo
+ * @subpackage mongo.models.datasources.mongodb_source
  */
 class MongodbSource_Tracer_MongoCursor extends MongodbSource_Tracer
 {

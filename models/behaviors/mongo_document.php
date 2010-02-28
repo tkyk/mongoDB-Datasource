@@ -9,16 +9,16 @@
  * Copyright (c) 2010 Takayuki Miwa http://github.com/tkyk/
  *
  * @copyright Copyright (c) 2010 Takayuki Miwa http://github.com/tkyk/
- * @package mongodb
- * @subpackage mongodb.models.behaviors
+ * @package mongo
+ * @subpackage mongo.models.behaviors
  * @license http://www.opensource.org/licenses/mit-license.php The MIT License
  */
 
 /**
  * MongoDocument Behavior
  *
- * @package mongodb
- * @subpackage mongodb.models.behaviors
+ * @package mongo
+ * @subpackage mongo.models.behaviors
  */
 class MongoDocumentBehavior extends ModelBehavior
 {
