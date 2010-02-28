@@ -1,6 +1,6 @@
 <?php
 
-require_once dirname(__FILE__) . DS . 'mongo_test_case.php';
+require_once dirname(__FILE__) . DS . '..' . DS . 'lib' . DS . 'mongo_test_case.php';
 
 App::import('Model', 'Mongo.MongoTestPerson');
 Mock::generate('MongoDB');
