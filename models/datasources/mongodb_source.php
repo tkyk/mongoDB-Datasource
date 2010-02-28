@@ -5,18 +5,21 @@
 * This datasource uses Pecl Mongo (http://php.net/mongo)
 * and is thus dependent on PHP 5.0 and greater.
 *
-* Original implementation by ichikaway(Yasushi Ichikawa) http://github.com/ichikaway/
+* Originally implemented by ichikaway(Yasushi Ichikawa) http://github.com/ichikaway/
+* and forked by Takayuki Miwa http://github.com/tkyk/
 *
 * Reference:
 *	Nate Abele's lithium mongoDB datasource (http://li3.rad-dev.org/)
 *	Joél Perras' divan(http://github.com/jperras/divan/)
 *
 * Copyright 2010, Yasushi Ichikawa http://github.com/ichikaway/
+* Copyright 2010, Takayuki Miwa http://github.com/tkyk/
 *
 * Licensed under The MIT License
 * Redistributions of files must retain the above copyright notice.
 *
 * @copyright Copyright 2010, Yasushi Ichikawa http://github.com/ichikaway/
+* @copyright Copyright 2010, Takayuki Miwa http://github.com/tkyk/
 * @package mongo
 * @subpackage mongo.models.datasources
 * @license http://www.opensource.org/licenses/mit-license.php The MIT License
