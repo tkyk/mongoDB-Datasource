@@ -1,6 +1,6 @@
 <?php
 
-App::import('Model', 'MongoTest.MongoTestPerson');
+App::import('Model', 'Mongo.MongoTestPerson');
 Mock::generate('MongoDB');
 Mock::generate('MongoCollection');
 Mock::generate('MongoCursor');
@@ -30,7 +30,27 @@ class MongoTestDatasourceCase extends CakeTestCase
   var $realSource;
   var $prevDebug;
 
+  function _buildModelPath() {
+    $testApp = realpath(dirname(__FILE__) . DS . ".." . DS . "test_app");
+    $modelPaths = array($testApp . DS . 'models' . DS);
+
+    if(version_compare(Configure::version(), '1.3.0-beta', '<')) {
+      Configure::write('modelPaths', $modelPaths);
+    } else {
+      App::build(array('models' => $modelPaths));
+    }
+  }
+
+  function _restoreModelPath() {
+    if(version_compare(Configure::version(), '1.3.0-beta', '<')) {
+      Configure::write('modelPaths', array());
+    } else {
+      App::build();
+    }
+  }
+
   function startCase() {
+    $this->_buildModelPath();
     $this->prevDebug = Configure::read('debug');
     Configure::write('debug', 1);
 
@@ -48,6 +68,7 @@ class MongoTestDatasource extends MongodbSource {
 
   function endCase() {
     Configure::write('debug', $this->prevDebug);
+    $this->_restoreModelPath();
   }
 
   function _createModel($props=array()) {
