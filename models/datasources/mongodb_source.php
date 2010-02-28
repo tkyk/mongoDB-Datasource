@@ -106,7 +106,7 @@ class MongodbSource extends DataSource {
  * @var string
  * @access protected
  */
-	protected $_pluginPrefix = "";
+	protected $_pluginPrefix = "Mongo.";
 
 /**
  * Constructor
@@ -115,12 +115,6 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function __construct($config = array()) {
-		// loaded as a plugin in CakePHP 1.3
-		if(strpos($config['datasource'], '.') !== false) {
-			list($plugin, $_source) = explode('.', $config['datasource'], 2);
-			$this->_pluginPrefix = "{$plugin}.";
-		}
-
 		parent::__construct($config);
 		$this->setDebugMode(Configure::read('debug'));
 		$this->connect();
