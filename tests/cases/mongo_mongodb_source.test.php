@@ -23,7 +23,7 @@ class MyMockMongoCollection extends MockMongoCollection
   }
 }
 
-class MongoTestDatasourceCase extends MongoTestCase
+class MongoMongodbSourceCase extends MongoTestCase
 {
   var $Person;
 
