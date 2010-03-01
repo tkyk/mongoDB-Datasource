@@ -674,6 +674,17 @@ class MongoTestDatasource extends MongodbSource {
     $this->source->limit($cur, $query);
   }
 
+  function testLimitAndPage1() {
+    $query = array('limit' => 10,
+		   'offset' => null,
+		   'page' => 1);
+
+    $cur = new MockMongoCursor();
+    $cur->expectOnce('limit', array($query['limit']));
+    $cur->expectNever('skip');
+    $this->source->limit($cur, $query);
+  }
+
   function testOnlyLimit() {
     $query = array('limit' => 100,
 		   'offset' => null,

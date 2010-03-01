@@ -498,7 +498,7 @@ class MongodbSource extends DataSource {
 	  }
 	  if(!empty($query['offset'])) {
 	    $cur->skip($query['offset']);
-	  } elseif(!empty($query['page']) && !empty($query['limit'])) {
+	  } elseif(!empty($query['page']) && !empty($query['limit']) && $query['page'] > 1) {
 	    $cur->skip(($query['page'] - 1) * $query['limit']);
 	  }
 	}
