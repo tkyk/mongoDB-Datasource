@@ -755,21 +755,17 @@ class MongoTestDatasource extends MongodbSource {
     $conditions = array('age' => 20);
 
     //setup actors
-    $cur = new MockMongoCursor();
-    $cur->setReturnValue('count', $count, array());
-
     $model = $this->_createModel(array('table' => 'tests',
 				       'alias' => 'Test',
 				       'findQueryType' => 'count'));
     $model->Behaviors->setReturnValue('enabled', false);
     $col = new MockMongoCollection();
-    $col->setReturnValue('find', $cur);
+    $col->setReturnValue('count', $count, array($conditions));
     $this->db->setReturnValue('selectCollection', $col, array($model->table));
 
     //set critics
-    $cur->expectOnce('count', array());
-    $cur->expectNever('hasNext');
-    $cur->expectNever('getNext');
+    $col->expectNever('find');
+    $col->expectOnce('count', array($conditions));
 
     // execute
     $ret = $this->source->read($model, $this->_makeQuery(compact('conditions')));

@@ -513,21 +513,25 @@ class MongodbSource extends DataSource {
  * @access public
  */
 	public function read(&$model, $query = array()) {
+	  $col = $this->_getCollection($model);
+
 	  foreach(array('fields', 'order') as $k) {
 	    $query[$k] = empty($query[$k]) ? array() : (array)$query[$k];
 	  }
 	  extract($query);
+	  $conditions = $this->conditions($conditions, $model);
 
-	  $cur = $this->_getCollection($model)
-	    ->find($this->conditions($conditions, $model), $fields);
+	  if ($model->findQueryType === 'count') {
+	    return array(array($model->alias
+						   => array('count'
+									=> $col->count($conditions))));
+	  }
+
+	  $cur = $col->find($conditions, $fields);
 	  if(!empty($order[0])) {
 	    $cur->sort($order[0]);
 	  }
 	  $this->limit($cur, $query);
-
-	  if ($model->findQueryType === 'count') {
-	    return array(array($model->alias => array('count' => $cur->count())));
-	  }
 
 	  $ret = array();
 	  while($cur->hasNext()) {
