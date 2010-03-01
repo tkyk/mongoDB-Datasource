@@ -4,9 +4,9 @@ This plugin provides basic interfaces to [MongoDB](http://www.mongodb.org/displa
 
 ## Requirements
 
--  PHP 5
+-  PHP 5.1 or later
 -  CakePHP 1.2/1.3
--  [PECL mongo](http://pecl.php.net/package/mongo)
+-  [PECL mongo](http://pecl.php.net/package/mongo) version 1.0.2 or later
 
 
 ## How to install

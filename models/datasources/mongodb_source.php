@@ -62,11 +62,15 @@ class MongodbSource extends DataSource {
  * @access protected
  */
 	var $_baseConfig = array(
-		'persistent' => false,
+		'server'     => null,
 		'host'       => 'localhost',
-		'database'   => '',
 		'port'       => '27017',
-		'debug'      => true
+
+		'persistent' => false,
+		'timeout'    => null,
+
+		'database'   => '',
+		'debug'      => true,
 	);
 
 
@@ -146,8 +150,20 @@ class MongodbSource extends DataSource {
  */
 	public function connect() {
 		$this->connected = false;
-		$host = $this->config['host'] . ':' . $this->config['port'];
-		$this->connection = new Mongo($host, true, $this->config['persistent']);
+
+		if(!empty($this->config['server'])) {
+			$server = $this->config['server'];
+		} else {
+			$server = $this->config['host'] . ':' . $this->config['port'];
+		}
+
+		$options = array('connect' => true,
+				 'persist' => $this->config['persistent']);
+		if(!is_null($this->config['timeout'])) {
+			$options['timeout'] = $this->config['timeout'];
+		}
+
+		$this->connection = new Mongo($server, $options);
 		if ($this->_db = $this->connection->selectDB($this->config['database'])) {
 			$this->connected = true;
 		}
