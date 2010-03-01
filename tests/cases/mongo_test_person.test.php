@@ -406,11 +406,9 @@ class MongoTestPersonCase extends MongoTestCase
     $this->assertEqual($this->Person->find('count', array('conditions' => array('num' => array('$gt' => 5)))), 15);
     $this->assertEqual($this->Person->find('count', array('conditions' => array('num' => array('$gt' => 20)))), 0);
 
-
-    // limit and offset/page will be ignored because of pecl mongo's limitation.
     $this->assertEqual($this->Person->find('count', array('limit' => 100)), 20);
-    $this->assertEqual($this->Person->find('count', array('limit' => 10)), 20);
-    $this->assertEqual($this->Person->find('count', array('offset' => 15, 'limit' => 100)), 20);
+    $this->assertEqual($this->Person->find('count', array('limit' => 10)), 10);
+    $this->assertEqual($this->Person->find('count', array('offset' => 15, 'limit' => 100)), 5);
   }
 
   function testQuery() {

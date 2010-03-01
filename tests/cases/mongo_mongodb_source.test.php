@@ -707,6 +707,47 @@ class MongoTestDatasource extends MongodbSource {
     $this->source->limit($cur, $query);
   }
 
+  function testLimitedCount() {
+    $all = 1000;
+    $s = $this->source;
+
+    $this->assertEqual(10,
+		       $s->limitedCount($all,
+					array('limit' => 10,
+					      'offset' => 100,
+					      'page' => 999))); //page should be ignored
+    $this->assertEqual(0,
+		       $s->limitedCount($all,
+					array('limit' => 10,
+					      'offset' => null,
+					      'page' => 999)));
+    $this->assertEqual(1,
+		       $s->limitedCount($all,
+					array('limit' => 9,
+					      'offset' => null,
+					      'page' => 112)));
+    $this->assertEqual(10,
+		       $s->limitedCount($all,
+					array('limit' => 10,
+					      'offset' => null,
+					      'page' => null)));
+    $this->assertEqual(500,
+		       $s->limitedCount($all,
+					array('limit' => null,
+					      'offset' => 500,
+					      'page' => null)));
+    $this->assertEqual(500,
+		       $s->limitedCount($all,
+					array('limit' => 1000,
+					      'offset' => 500,
+					      'page' => null)));
+    $this->assertEqual(1000,
+		       $s->limitedCount($all,
+					array('limit' => null,
+					      'offset' => null,
+					      'page' => 5)));
+  }
+
   function testReadWithLimit() {
     $id1 = str_repeat('a', 24);
     $id2 = str_repeat('b', 24);

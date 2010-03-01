@@ -503,6 +503,30 @@ class MongodbSource extends DataSource {
 	  }
 	}
 
+/**
+ * Calculates limit/offset/page in count queries
+ *
+ * @param integer $total
+ * @param array $query 
+ * @return integer 
+ * @access public
+ */
+	public function limitedCount($total, $query) {
+	  $offset = 0;
+	  $limit = $total;
+
+	  if(!empty($query['offset'])) {
+		$offset = $query['offset'];
+	  } elseif(!empty($query['page']) && !empty($query['limit'])) {
+		$offset = ($query['page'] - 1) * $query['limit'];
+	  }
+
+	  if(!empty($query['limit'])) {
+	    $limit = $query['limit'];
+	  }
+	  return min($limit, max(0, $total - $offset));
+	}
+
 
 /**
  * Read Data
@@ -522,9 +546,8 @@ class MongodbSource extends DataSource {
 	  $conditions = $this->conditions($conditions, $model);
 
 	  if ($model->findQueryType === 'count') {
-	    return array(array($model->alias
-						   => array('count'
-									=> $col->count($conditions))));
+		$count = $this->limitedCount($col->count($conditions), $query);
+	    return array(array($model->alias => array('count' => $count)));
 	  }
 
 	  $cur = $col->find($conditions, $fields);
